@@ -1,0 +1,138 @@
+{
+  "meta": {
+    "project": "subway",
+    "version": "3.0",
+    "generated": "2026-05-25T07:40:21.806Z",
+    "entryPoint": "index",
+    "totalStations": 4,
+    "totalSynapses": 2,
+    "totalLines": 0,
+    "totalWorlds": 1,
+    "languages": [
+      "ts"
+    ]
+  },
+  "worlds": [
+    {
+      "id": "test",
+      "name": "Test",
+      "color": "#f5a623",
+      "description": "Test domain",
+      "stations": [
+        "index",
+        "checkout",
+        "routes",
+        "auth"
+      ]
+    }
+  ],
+  "stations": [
+    {
+      "id": "index",
+      "label": "index",
+      "world": "test",
+      "role": "start",
+      "terminalType": null,
+      "files": [
+        "test/fixtures/sample-app/src/index.ts"
+      ],
+      "description": "index module",
+      "weight": {
+        "churn": 0,
+        "influence": 0,
+        "dependency": 0.6666666666666666,
+        "centrality": 0
+      },
+      "authors": [],
+      "lastModified": "2026-05-25T07:40:21.808Z",
+      "commitCount": 0
+    },
+    {
+      "id": "checkout",
+      "label": "checkout",
+      "world": "test",
+      "role": "terminal",
+      "terminalType": "failure",
+      "files": [
+        "test/fixtures/sample-app/src/services/checkout.ts"
+      ],
+      "description": "catch (err)",
+      "weight": {
+        "churn": 0,
+        "influence": 0,
+        "dependency": 0,
+        "centrality": 0
+      },
+      "authors": [],
+      "lastModified": "2026-05-25T07:40:21.808Z",
+      "commitCount": 0
+    },
+    {
+      "id": "routes",
+      "label": "routes",
+      "world": "test",
+      "role": "checkpoint",
+      "terminalType": null,
+      "files": [
+        "test/fixtures/sample-app/src/routes.ts"
+      ],
+      "description": "routes module",
+      "weight": {
+        "churn": 0,
+        "influence": 1,
+        "dependency": 1,
+        "centrality": 0
+      },
+      "authors": [],
+      "lastModified": "2026-05-25T07:40:21.808Z",
+      "commitCount": 0
+    },
+    {
+      "id": "auth",
+      "label": "auth",
+      "world": "test",
+      "role": "checkpoint",
+      "terminalType": null,
+      "files": [
+        "test/fixtures/sample-app/src/services/auth.ts"
+      ],
+      "description": "auth module",
+      "weight": {
+        "churn": 0,
+        "influence": 1,
+        "dependency": 1,
+        "centrality": 0
+      },
+      "authors": [],
+      "lastModified": "2026-05-25T07:40:21.808Z",
+      "commitCount": 0
+    }
+  ],
+  "synapses": [
+    {
+      "from": "index",
+      "to": "routes",
+      "condition": {
+        "description": "Imports: routes",
+        "type": "always",
+        "value": "import { routes }"
+      },
+      "direction": "forward",
+      "isCritical": true,
+      "strength": 0.5
+    },
+    {
+      "from": "checkout",
+      "to": "auth",
+      "condition": {
+        "description": "Imports: isAuthenticated",
+        "type": "always",
+        "value": "import { isAuthenticated }"
+      },
+      "direction": "forward",
+      "isCritical": true,
+      "strength": 0.5
+    }
+  ],
+  "lines": []
+}

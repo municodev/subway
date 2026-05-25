@@ -1,0 +1,5 @@
+allowBuilds:
+  esbuild: set this to true or false
+  tree-sitter: true
+  tree-sitter-javascript: true
+  tree-sitter-typescript: true
