@@ -10,6 +10,7 @@ import { runEmbed } from './embed/index.js';
 import { resolveEmbedConfig } from './embed/config.js';
 import { OllamaProvider } from './embed/ollama.js';
 import { OpenAIProvider } from './embed/openai.js';
+import { runNarrate } from './narrate/index.js';
 const packageJson = JSON.parse(
   fs.readFileSync(new URL('../package.json', import.meta.url), 'utf-8'),
 );
@@ -35,6 +36,11 @@ program
   .option('--embed-api-key <key>', 'API key for OpenAI-compatible providers')
   .option('--embed-base-url <url>', 'Base URL for the embedding API')
   .option('--embed-concurrency <n>', 'Concurrent requests for Ollama', Number)
+  .option('--narrate', 'Use LLM to generate descriptions, roles, and lines')
+  .option('--narrate-provider <provider>', 'LLM provider: ollama or openai')
+  .option('--narrate-model <model>', 'LLM model (e.g., llama3.2, gpt-4o-mini)')
+  .option('--narrate-api-key <key>', 'API key for OpenAI-compatible LLM')
+  .option('--narrate-base-url <url>', 'Base URL for the LLM API')
   .action(async (options) => {
     const rootDir = path.resolve(options.root);
     const outputPath = path.resolve(options.output);
@@ -113,6 +119,24 @@ program
       }
     }
 
+    // Phase 4: NARRATE
+    if (options.narrate) {
+      try {
+        const report = await runNarrate(schema, {
+          provider: options.narrateProvider,
+          model: options.narrateModel,
+          apiKey: options.narrateApiKey,
+          baseUrl: options.narrateBaseUrl,
+        });
+        if (report.linesGenerated > 0 || report.stationsDescribed > 0) {
+          console.log('');
+          schema.meta.totalLines = schema.lines.length;
+        }
+      } catch (err) {
+        console.warn(`      ⚠  Narration failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
     // Write final schema
     console.log('  💾  Writing subway.json...');
     writeSubwayJson(schema, outputPath);
@@ -152,7 +176,7 @@ program
   .description('Launch a local viewer for the subway map')
   .option('-p, --port <port>', 'Port to serve on', '4242')
   .option('-f, --file <path>', 'Path to subway.json', './subway.json')
-  .action((options) => {
+  .action(async (options) => {
     const filePath = path.resolve(options.file);
     if (!fs.existsSync(filePath)) {
       console.error(`  ✗ subway.json not found at ${filePath}`);
@@ -160,16 +184,34 @@ program
       process.exit(1);
     }
 
-    // For now, print a placeholder.
-    // In Fase 5, this will start a Vite dev server with the React viewer.
+    // Generate a self-contained HTML viewer
+    const { generateViewerHtml } = await import('./generate-viewer.js');
+    const schema = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    const html = generateViewerHtml(schema);
+
+    const outPath = filePath.replace(/\.json$/, '.html');
+    fs.writeFileSync(outPath, html, 'utf-8');
+
     console.log('');
     console.log('  🚇  Subway Viewer');
     console.log(`  ${'─'.repeat(40)}`);
-    console.log(`  Loaded: ${filePath}`);
+    console.log(`  Source:   ${filePath}`);
+    console.log(`  Generated: ${outPath}`);
+    console.log(`  Size:     ${(Buffer.byteLength(html) / 1024).toFixed(1)} KB`);
     console.log('');
-    console.log('  ⚠  Static viewer not yet implemented (Fase 5).');
-    console.log('  For now, use the React renderer sample:');
-    console.log('    npx vite dev -- --port 4242');
+    console.log('  Opening in browser...');
+
+    // Open in browser
+    const { exec } = await import('node:child_process');
+    const url = `file://${outPath}`;
+    const platform = process.platform;
+    if (platform === 'darwin') {
+      exec(`open "${url}"`);
+    } else if (platform === 'win32') {
+      exec(`start "" "${url}"`);
+    } else {
+      exec(`xdg-open "${url}"`);
+    }
     console.log('');
   });
 

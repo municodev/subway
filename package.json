@@ -1,15 +1,20 @@
 {
-  "name": "subway",
-  "version": "0.1.0",
+  "name": "@municode/subway",
+  "version": "0.1.4",
   "description": "Map your codebase — Every codebase is a game. Every search is a synapse.",
   "type": "module",
   "bin": {
-    "subway": "./dist/cli.js"
+    "subway": "./dist/cli.js",
+    "subway-mcp": "./dist/mcp-server.js"
   },
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./mcp": {
+      "import": "./dist/mcp/index.js",
+      "types": "./dist/mcp/index.d.ts"
     }
   },
   "files": [
@@ -21,7 +26,8 @@
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm run test"
   },
   "keywords": [
     "codebase",
@@ -32,12 +38,16 @@
   ],
   "author": "",
   "license": "MIT",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.3.0",
-      "onFail": "download"
-    }
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vincemuni/subway.git"
+  },
+  "homepage": "https://github.com/vincemuni/subway#readme",
+  "bugs": {
+    "url": "https://github.com/vincemuni/subway/issues"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.2",

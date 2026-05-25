@@ -703,19 +703,17 @@ Sempre disponibile. Sempre viva.
 - [x] `subway init` per TypeScript/JavaScript
 - [x] Fase TRACE: entry point, navigation, condizioni, terminal nodes
 - [x] Fase WEIGHT: git log, import graph, betweenness
-- [ ] Fase EMBED: generazione embedding + indice vettoriale locale
-- [ ] Fase NARRATE: LLM per descriptions, Worlds, condizioni
-- [ ] Output: `subway.json` v3.0 valido
+- [x] Fase EMBED: generazione embedding + indice vettoriale locale
+- [x] Fase NARRATE: LLM per descriptions, Worlds, condizioni
+- [x] Output: `subway.json` v3.0 valido
 
 ### Fase 3 — MCP Server (2 settimane)
 - [ ] Implementare i 9 tool MCP
 - [ ] `subway_search` con Spreading Activation
 - [ ] Pubblicare come pacchetto npm
-- [ ] Test con Claude Desktop e Cursor
 
 ### Fase 4 — Skill (1 settimana)
-- [ ] Scrivere la Skill completa con prompt strutturato
-- [ ] Test su 3 progetti diversi (mobile, backend, frontend)
+- [ ] Scrivere le Skill complete con prompt strutturato
 - [ ] Documentazione e guide di adozione
 
 ### Fase 5 — Linguaggi aggiuntivi (ongoing)

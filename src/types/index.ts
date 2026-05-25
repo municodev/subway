@@ -112,11 +112,41 @@ export interface SubwaySchema {
 // Internal types (not in subway.json)
 // ============================================================
 
+/**
+ * Recognized source languages. Extend this as new tree-sitter grammars
+ * or regex-based detectors are added.
+ */
+export type SourceLanguage =
+  | 'typescript' | 'javascript' | 'tsx' | 'jsx'
+  | 'python' | 'ruby' | 'go' | 'rust'
+  | 'kotlin' | 'swift' | 'dart' | 'java'
+  | 'csharp' | 'cpp' | 'c' | 'php'
+  | 'shell' | 'sql' | 'yaml' | 'json'
+  | 'markdown' | 'html' | 'css'
+  | 'other';
+
 /** A file discovered during scanning */
 export interface SourceFile {
   path: string;
-  language: 'typescript' | 'javascript' | 'tsx' | 'jsx';
+  language: SourceLanguage;
   content: string;
+}
+
+/**
+ * Detected project ecosystem — auto-inferred from config files
+ * (package.json, go.mod, Cargo.toml, etc.) during project scanning.
+ */
+export interface ProjectEcosystem {
+  /** Primary language(s) detected */
+  languages: string[];
+  /** Framework(s) detected (react, nextjs, django, rails, etc.) */
+  frameworks: string[];
+  /** Package manager (npm, yarn, pnpm, pip, bundler, cargo, etc.) */
+  packageManager: string | null;
+  /** Key dependencies extracted from lock/manifest files */
+  dependencies: string[];
+  /** Config files found (package.json, go.mod, Cargo.toml, etc.) */
+  configFiles: string[];
 }
 
 /** A detected entry point in the codebase */
@@ -177,4 +207,5 @@ export interface TraceConfig {
   rootDir: string;
   ignoreDirs?: string[];
   frameworkHints?: string[];
+  ecosystem?: ProjectEcosystem;
 }

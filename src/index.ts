@@ -20,3 +20,48 @@ export { computeInfluence, computeDependencyScore } from './weight/influence.js'
 export { computeCentrality } from './weight/centrality.js';
 export { runEmbed, VectorStore, resolveEmbedConfig, buildStationCorpus } from './embed/index.js';
 export { cosineSimilarity, spreadActivation } from './embed/vector-store.js';
+export { runNarrate, type NarrateReport } from './narrate/index.js';
+export { promptWorldNaming, promptStationDescription, promptSynapseCondition, promptLineGeneration } from './narrate/prompts.js';
+export { createSubwayServer, startMcpServer } from './mcp/index.js';
+export {
+  subwaySearch,
+  subwayStation,
+  subwayPath,
+  subwayImpact,
+  subwayConditions,
+  subwayOnboard,
+  subwayLine,
+  subwayBusRisk,
+  subwayAsk,
+} from './mcp/tools.js';
+export {
+  MapSession,
+  getActiveSession,
+  setActiveSession,
+  createSession,
+} from './mcp/session.js';
+export type { ProjectScanResult, SessionStatus } from './mcp/session.js';
+export {
+  subwayInitMap,
+  subwayReadFile,
+  subwayReadDir,
+  subwayAddWorld,
+  subwayAddStation,
+  subwayUpdateStation,
+  subwayRemoveStation,
+  subwayAddSynapse,
+  subwayRemoveSynapse,
+  subwayAddLine,
+  subwaySaveMap,
+  subwayStatus,
+  subwayListStations,
+  subwayListWorlds,
+  subwayListLines,
+  subwayScan,
+  subwayServe,
+  subwayQuerySearch,
+  subwayQueryStation,
+  subwayQueryPath,
+  subwayQueryImpact,
+  subwayQueryConditions,
+} from './mcp/build-tools.js';
