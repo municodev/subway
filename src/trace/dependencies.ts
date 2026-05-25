@@ -126,26 +126,50 @@ function extractImportSymbols(node: Node, code: string, out: string[]): void {
 /** Resolve a module path to an actual file on disk */
 function resolveModulePath(basePath: string, language: string): string | null {
   const extensions = [
-    '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs',
-    '/index.ts', '/index.tsx', '/index.js', '/index.jsx',
+    '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts',
+  ];
+  const indexFiles = [
+    '/index.ts', '/index.tsx', '/index.js', '/index.jsx', '/index.mjs',
   ];
 
-  // Direct file match
-  if (fs.existsSync(basePath)) {
-    const stat = fs.statSync(basePath);
-    if (stat.isFile()) return basePath;
-    if (stat.isDirectory()) {
-      for (const ext of extensions) {
-        const candidate = basePath + ext;
-        if (fs.existsSync(candidate)) return candidate;
-      }
+  // Handle .js → .ts/.tsx mapping (common for ESM TypeScript projects)
+  // where imports use .js extension but source files are .ts
+  const jsToTs = (p: string) => {
+    if (p.endsWith('.js')) return p.slice(0, -3) + '.ts';
+    if (p.endsWith('.jsx')) return p.slice(0, -4) + '.tsx';
+    return p;
+  };
+
+  // File path resolution order:
+  const candidates: string[] = [];
+
+  // 1. The original path exactly
+  candidates.push(basePath);
+
+  // 2. .js → .ts / .jsx → .tsx swap
+  candidates.push(jsToTs(basePath));
+
+  // 3. With each extension appended (import './foo' → './foo.ts')
+  for (const ext of extensions) {
+    candidates.push(basePath + ext);
+    candidates.push(jsToTs(basePath + ext));
+  }
+
+  // Try each candidate
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      const stat = fs.statSync(candidate);
+      if (stat.isFile()) return candidate;
     }
   }
 
-  // Try with extensions
-  for (const ext of extensions) {
-    const candidate = basePath + ext;
+  // Directory resolution: try basePath as a directory with index files
+  for (const index of indexFiles) {
+    const candidate = basePath + index;
     if (fs.existsSync(candidate)) return candidate;
+    // Also try with .js → .ts swap on the base
+    const swapped = jsToTs(basePath) + index;
+    if (swapped !== candidate && fs.existsSync(swapped)) return swapped;
   }
 
   return null;

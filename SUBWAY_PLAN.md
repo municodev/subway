@@ -700,9 +700,9 @@ Sempre disponibile. Sempre viva.
 - [x] Status bar con suggerimenti interattivi e legenda dependency
 
 ### Fase 2 — CLI MVP (3 settimane)
-- [ ] `subway init` per TypeScript/JavaScript
-- [ ] Fase TRACE: entry point, navigation, condizioni, terminal nodes
-- [ ] Fase WEIGHT: git log, import graph, betweenness
+- [x] `subway init` per TypeScript/JavaScript
+- [x] Fase TRACE: entry point, navigation, condizioni, terminal nodes
+- [x] Fase WEIGHT: git log, import graph, betweenness
 - [ ] Fase EMBED: generazione embedding + indice vettoriale locale
 - [ ] Fase NARRATE: LLM per descriptions, Worlds, condizioni
 - [ ] Output: `subway.json` v3.0 valido
@@ -722,6 +722,7 @@ Sempre disponibile. Sempre viva.
 - [ ] Kotlin / Java
 - [ ] Python / Django / FastAPI
 - [ ] Swift / SwiftUI
+- [ ] Flutter / Dart
 - [ ] Go
 - [ ] PHP (monoliti enterprise legacy)
 - [ ] Ruby on Rails

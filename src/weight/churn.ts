@@ -101,11 +101,15 @@ export function normalizeChurn(
 
   const max = Math.max(...values);
   const min = Math.min(...values);
-  const range = max - min || 1;
+  const range = max - min;
 
-  const result = new Map<string, number>();
-  for (const [file, entry] of entries) {
-    result.set(file, (entry.commitCount - min) / range);
+  // If all identical (single commit, no variance),
+  // everybody was touched equally → 0.5 mid-range
+  if (range === 0) {
+    return new Map([...entries.keys()].map(f => [f, 0.5]));
   }
-  return result;
+
+  return new Map(
+    [...entries.entries()].map(([file, entry]) => [file, (entry.commitCount - min) / range])
+  );
 }

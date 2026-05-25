@@ -18,3 +18,5 @@ export { runWeight } from './weight/index.js';
 export { computeChurn, normalizeChurn } from './weight/churn.js';
 export { computeInfluence, computeDependencyScore } from './weight/influence.js';
 export { computeCentrality } from './weight/centrality.js';
+export { runEmbed, VectorStore, resolveEmbedConfig, buildStationCorpus } from './embed/index.js';
+export { cosineSimilarity, spreadActivation } from './embed/vector-store.js';

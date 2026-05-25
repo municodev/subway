@@ -33,6 +33,9 @@ export function runWeight(
 
   // Map: station ID → max churn across its files
   const stationChurn = new Map<string, number>();
+  let totalWithGitActivity = 0;
+  let totalCommits = 0;
+
   for (const station of stations) {
     let maxChurn = 0;
     let maxCommitCount = 0;
@@ -44,6 +47,7 @@ export function runWeight(
       const gitEntry = churnEntries.get(file) ?? churnEntries.get(absFile);
       if (gitEntry) {
         maxCommitCount = Math.max(maxCommitCount, gitEntry.commitCount);
+        totalCommits = Math.max(totalCommits, gitEntry.commitCount);
         if (gitEntry.lastModified > latestDate) {
           latestDate = gitEntry.lastModified;
         }
@@ -51,6 +55,7 @@ export function runWeight(
       }
 
       const churnVal = churnNormalized.get(file) ?? churnNormalized.get(absFile) ?? 0;
+      if (churnVal > 0) totalWithGitActivity++;
       maxChurn = Math.max(maxChurn, churnVal);
     }
 
@@ -59,6 +64,9 @@ export function runWeight(
     station.lastModified = latestDate || station.lastModified;
     station.authors = [...allAuthors];
   }
+
+  // Track max commit count for the log message
+  (runWeight as any).__totalCommits = totalCommits;
 
   // 2. Influence from dependency graph
   const influenceValues = computeInfluence(stations, dependencies);

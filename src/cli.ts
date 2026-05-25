@@ -6,6 +6,10 @@ import * as fs from 'node:fs';
 import { runTrace } from './trace/index.js';
 import { buildSubwayJson, writeSubwayJson } from './output/index.js';
 import { runWeight } from './weight/index.js';
+import { runEmbed } from './embed/index.js';
+import { resolveEmbedConfig } from './embed/config.js';
+import { OllamaProvider } from './embed/ollama.js';
+import { OpenAIProvider } from './embed/openai.js';
 const packageJson = JSON.parse(
   fs.readFileSync(new URL('../package.json', import.meta.url), 'utf-8'),
 );
@@ -24,8 +28,13 @@ program
   .option('-r, --root <path>', 'Project root directory', '.')
   .option('-o, --output <path>', 'Output path for subway.json', './subway.json')
   .option('--name <name>', 'Project name (default: directory name)')
-  .option('--skip-weight', 'Skip weight calculation (Fase 2)')
-  .option('--skip-embed', 'Skip embedding generation (Fase 4)')
+  .option('--skip-weight', 'Skip weight calculation')
+  .option('--embed', 'Generate semantic embeddings for synaptic search')
+  .option('--embed-provider <provider>', 'Embedding provider: ollama or openai')
+  .option('--embed-model <model>', 'Embedding model (e.g., nomic-embed-text, text-embedding-3-small)')
+  .option('--embed-api-key <key>', 'API key for OpenAI-compatible providers')
+  .option('--embed-base-url <url>', 'Base URL for the embedding API')
+  .option('--embed-concurrency <n>', 'Concurrent requests for Ollama', Number)
   .action(async (options) => {
     const rootDir = path.resolve(options.root);
     const outputPath = path.resolve(options.output);
@@ -65,13 +74,42 @@ program
           traceResult.dependencies,
           schema.synapses,
         );
-        console.log(`      ✓ Churn: ${schema.stations.filter(s => s.weight.churn > 0).length} stations with git activity`);
+        const churnActiveStations = schema.stations.filter(s => s.weight.churn > 0 || s.commitCount > 0);
+        const totalCommits = Math.max(...schema.stations.map(s => s.commitCount), 0);
+        const authorCount = new Set(schema.stations.flatMap(s => s.authors)).size;
+        console.log(`      ✓ Churn: ${churnActiveStations.length}/${schema.stations.length} stations tracked (${totalCommits} commits, ${authorCount} authors)`);
         console.log(`      ✓ Influence: max ${Math.max(...schema.stations.map(s => s.weight.influence)).toFixed(2)}`);
         console.log(`      ✓ Centrality: max ${Math.max(...schema.stations.map(s => s.weight.centrality)).toFixed(2)}`);
         console.log(`      ✓ Dependency risk: max ${Math.max(...schema.stations.map(s => s.weight.dependency)).toFixed(2)}`);
       } catch (err) {
         console.warn(`      ⚠  Weight computation failed: ${err instanceof Error ? err.message : String(err)}`);
         console.warn('      Stations will have zero weights.');
+      }
+    }
+
+    // Phase 3: EMBED
+    if (options.embed) {
+      try {
+        const report = await runEmbed(
+          schema.stations,
+          schema.synapses,
+          {
+            provider: options.embedProvider,
+            model: options.embedModel,
+            apiKey: options.embedApiKey,
+            baseUrl: options.embedBaseUrl,
+            concurrency: options.embedConcurrency,
+          },
+        );
+        schema.meta.embeddings_model = `${report.provider}:${report.model}`;
+        console.log(`      ✓ ${report.embeddingsGenerated}/${report.stationsProcessed} stations embedded (${report.dimension}d vectors, ${report.provider})`);
+        if (report.failures > 0) {
+          console.warn(`      ⚠  ${report.failures} stations failed to embed`);
+        }
+      } catch (err) {
+        console.warn(`      ⚠  Embedding failed: ${err instanceof Error ? err.message : String(err)}`);
+        console.warn('      Run with --embed-provider ollama for local embeddings, or set SUBWAY_EMBED_API_KEY for OpenAI.');
+        console.warn('      Skipping embedding — map will use keyword search only.');
       }
     }
 
@@ -138,11 +176,13 @@ program
 // ==================== search ====================
 program
   .command('search')
-  .description('Synaptic search across the codebase map')
+  .description('Synaptic search across the codebase map (vector or keyword)')
   .argument('<query>', 'Search query (technical, functional, or symptomatic)')
   .option('-f, --file <path>', 'Path to subway.json', './subway.json')
   .option('--limit <n>', 'Max results', '10')
-  .action((query, options) => {
+  .option('--keyword', 'Force keyword search (skip vectors)')
+  .option('--spread', 'Apply spreading activation (2 hops)')
+  .action(async (query, options) => {
     const filePath = path.resolve(options.file);
     if (!fs.existsSync(filePath)) {
       console.error(`  ✗ subway.json not found at ${filePath}`);
@@ -150,50 +190,115 @@ program
       process.exit(1);
     }
 
-    const schema = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    const schema: import('./types/index.js').SubwaySchema = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     const limit = parseInt(options.limit, 10);
+    const hasEmbeddings = schema.stations.some(s => s.embedding && s.embedding.length > 0);
+    const useVectors = !options.keyword && hasEmbeddings;
 
-    // Basic keyword search (Synaptic Search with synonym dictionary in Fase 5)
     console.log('');
-    console.log(`  🔍  Search: "${query}"`);
+    console.log(`  🔍  Synaptic Search: "${query}"`);
     console.log(`  ${'─'.repeat(40)}`);
+    if (useVectors) {
+      console.log(`  Mode:  ${options.spread ? 'spreading activation' : 'cosine similarity'} (${schema.meta.embeddings_model})`);
+    } else {
+      console.log('  Mode:  keyword matching');
+    }
+    console.log('');
 
-    const q = query.toLowerCase();
-    const results: Array<{ station: typeof schema.stations[0]; score: number }> = [];
+    type StationResult = { station: typeof schema.stations[0]; score: number };
+    let results: StationResult[] = [];
 
-    for (const station of schema.stations) {
-      const corpus = [
-        station.label,
-        station.description,
-        station.world,
-        ...station.files,
-      ].join(' ').toLowerCase();
-
-      let score = 0;
-      if (corpus.includes(q)) {
-        score = corpus === station.label.toLowerCase() ? 0.96 :
-                station.world.toLowerCase() === q ? 0.72 : 0.78;
+    if (useVectors) {
+      // Need to generate query embedding
+      const embedConfig = resolveEmbedConfig();
+      let provider: OllamaProvider | OpenAIProvider;
+      if (embedConfig.provider === 'ollama') {
+        provider = new OllamaProvider(embedConfig);
+      } else {
+        provider = new OpenAIProvider(embedConfig);
       }
 
-      if (score > 0) {
-        results.push({ station, score });
+      try {
+        console.log('  🧠  Generating query embedding...');
+        const [queryVec] = await provider.embed([query]);
+        if (!queryVec || queryVec.length === 0) {
+          throw new Error('Empty embedding returned');
+        }
+
+        const { cosineSimilarity, spreadActivation } = await import('./embed/vector-store.js');
+
+        if (options.spread) {
+          // Spreading activation
+          const nodeVectors = new Map<string, number[]>();
+          for (const s of schema.stations) {
+            if (s.embedding) nodeVectors.set(s.id, s.embedding);
+          }
+          const edges = schema.synapses.map(s => ({
+            from: s.from, to: s.to, strength: s.strength,
+          }));
+          const activations = spreadActivation(queryVec, nodeVectors, edges);
+          const activationResults: StationResult[] = [];
+          for (const [id, act] of activations) {
+            const station = schema.stations.find(s => s.id === id);
+            if (station) activationResults.push({ station, score: act });
+          }
+          activationResults.sort((a, b) => b.score - a.score);
+          results = activationResults;
+        } else {
+          // Cosine similarity
+          for (const station of schema.stations) {
+            if (station.embedding) {
+              results.push({
+                station,
+                score: cosineSimilarity(queryVec, station.embedding),
+              });
+            }
+          }
+          results.sort((a, b) => b.score - a.score);
+        }
+      } catch (err) {
+        console.warn(`  ⚠  Vector search unavailable: ${err instanceof Error ? err.message : String(err)}`);
+        console.log('  Falling back to keyword search...\n');
+        useVectors as unknown; // already in catch, continue to keyword
       }
     }
 
-    // Sort by score
-    results.sort((a, b) => b.score - a.score);
+    // Keyword fallback if vectors failed or not available
+    if (results.length === 0 && !useVectors) {
+      const q = query.toLowerCase();
+      for (const station of schema.stations) {
+        const corpus = [
+          station.label,
+          station.description,
+          station.world,
+          ...station.files,
+        ].join(' ').toLowerCase();
+
+        let score = 0;
+        if (corpus.includes(q)) {
+          score = corpus === station.label.toLowerCase() ? 0.96 :
+                  station.world.toLowerCase() === q ? 0.72 : 0.78;
+        }
+        if (score > 0) {
+          results.push({ station, score });
+        }
+      }
+      results.sort((a, b) => b.score - a.score);
+    }
 
     if (results.length === 0) {
       console.log('  No results found.');
+      console.log('  💡  Try broader terms, or generate embeddings with: subway init --embed');
     } else {
       const display = results.slice(0, limit);
       for (const r of display) {
         const pct = Math.round(r.score * 100);
         const bar = '●'.repeat(Math.ceil(pct / 10)) + '○'.repeat(10 - Math.ceil(pct / 10));
-        console.log(`  ${bar}  ${pct}%  ${r.station.label.padEnd(30)} [${r.station.world}]`);
+        const roleTag = r.station.role === 'start' ? ' 🏁' : '';
+        console.log(`  ${bar}  ${pct}%  ${r.station.label.padEnd(30)} [${r.station.world}]${roleTag}`);
       }
       console.log('');
-      console.log(`  ${results.length} station(s) matched. Showing ${display.length}.`);
+      console.log(`  ${results.length} station(s) matched. Showing top ${display.length}.`);
     }
     console.log('');
   });
