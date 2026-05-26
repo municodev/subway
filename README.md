@@ -76,6 +76,25 @@ Configure in Claude Desktop:
 }
 ```
 
+Or in Cursor (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "subway": {
+      "command": "subway-mcp",
+      "args": ["--file", "/path/to/subway.json"]
+    }
+  }
+}
+```
+
+> **⚠️ "I installed it but the tools aren't showing up"** — This is the most common pitfall with MCP. Installing the npm package (`npm install -g`) only puts the `subway-mcp` binary on your disk. MCP tools are **not** automatically available to your AI client — you must also register the server in your client's MCP config. Think of it like installing a program but never creating the desktop shortcut. The wiring is:
+>
+> `npm install` → binary exists on disk → **config entry tells the client where it is** → client spawns the server process → tools appear.
+>
+> If the config step is missing, the tools simply won't show up, even though `subway-mcp` works fine from the terminal. The CLI path (`subway init` / `subway serve`) is always available as a fallback.
+
 ## Concepts
 
 - **Worlds** — logical domains with distinct visual identity
