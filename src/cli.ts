@@ -11,6 +11,9 @@ import { resolveEmbedConfig } from './embed/config.js';
 import { OllamaProvider } from './embed/ollama.js';
 import { OpenAIProvider } from './embed/openai.js';
 import { runNarrate } from './narrate/index.js';
+import { checkForUpdates, selfUpdate } from './update-check.js';
+
+const PACKAGE_NAME = '@municode/subway';
 const packageJson = JSON.parse(
   fs.readFileSync(new URL('../package.json', import.meta.url), 'utf-8'),
 );
@@ -21,6 +24,44 @@ program
   .name('subway')
   .description('Map your codebase — Every codebase is a game. Every search is a synapse.')
   .version(packageJson.version);
+
+// Background update check — runs before every command except 'update'
+program.hook('preAction', async (thisCommand, actionCommand) => {
+  if (actionCommand.name() === 'update') return;
+  // Fire-and-forget: don't block the main command
+  checkForUpdates(PACKAGE_NAME, packageJson.version).catch(() => {});
+});
+
+// ==================== update ====================
+program
+  .command('update')
+  .description('Check for updates and install the latest version')
+  .option('--check-only', 'Only check for updates, do not install')
+  .action(async (options) => {
+    if (options.checkOnly) {
+      const latest = await checkForUpdates(PACKAGE_NAME, packageJson.version);
+      if (!latest) {
+        console.log('');
+        console.log(`  ✓  subway is up to date (v${packageJson.version})`);
+        console.log('');
+      }
+      return;
+    }
+
+    // Show what's available first
+    const latest = await checkForUpdates(PACKAGE_NAME, packageJson.version, true);
+    if (latest) {
+      console.log(`  🚇  Upgrading from v${packageJson.version} → v${latest}...`);
+    } else {
+      console.log('');
+      console.log(`  ✓  subway is already at the latest version (v${packageJson.version})`);
+      console.log('');
+      return;
+    }
+
+    const ok = selfUpdate(PACKAGE_NAME);
+    if (!ok) process.exit(1);
+  });
 
 // ==================== init ====================
 program

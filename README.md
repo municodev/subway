@@ -84,6 +84,15 @@ Configure in Claude Desktop:
 - **Lines** — complete end-to-end user flows
 - **Synaptic Search** — type a word, the map lights up like a neural network
 
+## Synaptic Weights
+
+Subway enriches every station (group of files/module) with four dynamic metrics (synaptic weights) ranging from `0` to `1` (or `0%` to `100%`) to evaluate code quality, structure, and risk:
+
+* **Churn** — **Git Change Frequency**: Measures how active a station is in continuous development by analyzing commit history over the last 12 months. Higher churn signals high-velocity, frequently modified code.
+* **Centrality** — **Structural Hub Index**: Uses Betweenness Centrality (via Brandes' algorithm) to measure how often a station sits on the shortest path between other stations. High centrality reveals critical hubs that bridge different parts of the system.
+* **Dependency** — **Third-Party Risk**: The ratio of external library imports (like npm packages) to local imports. A higher score points to higher coupling and external ecosystem risk.
+* **Influence** — **Local Usage Impact**: Measures how widely a station's files are imported by other stations across the local codebase. Core utility modules or shared UI components exhibit high influence.
+
 ## Requirements
 
 - Node.js 18+

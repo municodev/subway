@@ -708,6 +708,9 @@ nodeEls.append('text').attr('class', 'n-label').attr('text-anchor', 'middle').at
 nodeEls.append('text').attr('class', 'n-pct').attr('text-anchor', 'middle').attr('font-size', 7).attr('font-weight', 700).style('user-select','none').style('pointer-events','none');
 nodeEls.append('circle').attr('class', 'n-note-dot').attr('r', 2).attr('fill', '#fbbf24').attr('opacity', 0);
 nodeEls.append('text').attr('class', 'n-pin').attr('font-size', 8).style('user-select','none').style('pointer-events','none');
+nodeEls.append('circle').attr('class', 'n-rel-ring').attr('fill', 'none').attr('stroke-width', 2).attr('opacity', 0);
+nodeEls.append('text').attr('class', 'n-rel-arrow').attr('text-anchor', 'middle').attr('font-size', 10).style('user-select','none').style('pointer-events','none');
+nodeEls.append('text').attr('class', 'n-cat-label').attr('text-anchor', 'middle').attr('font-size', 6).attr('font-weight', 700).style('user-select','none').style('pointer-events','none');
 
 // ─── FORCE SIMULATION (tighter layout) ───
 const sim = d3.forceSimulation(nodeData)
@@ -759,6 +762,26 @@ function updateNodeStyles() {
     return s;
   })() : null;
 
+  // ─── RELATIONSHIP SETS (when a node is selected) ───
+  const outgoingIds = new Set();
+  const incomingIds = new Set();
+  const bidirectionalIds = new Set();
+  const twoHopIds = new Set();
+  if (selected) {
+    SYNAPSES.forEach(s => {
+      if (s.from === selected.id) outgoingIds.add(s.to);
+      if (s.to === selected.id) incomingIds.add(s.from);
+    });
+    // Bidirectional = nodes that are both outgoing and incoming
+    outgoingIds.forEach(id => { if (incomingIds.has(id)) { bidirectionalIds.add(id); outgoingIds.delete(id); incomingIds.delete(id); } });
+    // 2-hop: nodes connected to direct neighbors (but not directly to selected)
+    const allDirect = new Set([selected.id, ...outgoingIds, ...incomingIds, ...bidirectionalIds]);
+    SYNAPSES.forEach(s => {
+      if (allDirect.has(s.from) && !allDirect.has(s.to)) twoHopIds.add(s.to);
+      if (allDirect.has(s.to) && !allDirect.has(s.from)) twoHopIds.add(s.from);
+    });
+  }
+
   nodeEls.each(function(d) {
     const g = d3.select(this);
     const W = worldMap[d.world] || { color: '#666', name: d.world };
@@ -769,9 +792,20 @@ function updateNodeStyles() {
     const isStart = isRoot(d);
     const isSel = selected?.id === d.id;
     const isHov = hovered?.id === d.id;
+    const isOut = outgoingIds.has(d.id);
+    const isInc = incomingIds.has(d.id);
+    const isBi = bidirectionalIds.has(d.id);
+    const is2Hop = twoHopIds.has(d.id);
+    const isDirectNeighbor = isOut || isInc || isBi;
+    const hasSelection = !!selected;
 
     let op = 1;
-    if (!showAll && connectedIds.size === 0) {
+    if (hasSelection) {
+      if (isSel) op = 1;
+      else if (isDirectNeighbor) op = 0.88;
+      else if (is2Hop) op = 0.38;
+      else op = 0.03;
+    } else if (!showAll && connectedIds.size === 0) {
       op = isRoot(d) ? 1 : 0;
     } else if (!showAll) {
       if (isRoot(d)) op = 1;
@@ -784,7 +818,7 @@ function updateNodeStyles() {
     } else if (connectedIds.size > 0 && !connectedIds.has(d.id)) {
       op = 0.08;
     }
-    if (!passesFilters(d)) op = 0.03;
+    if (!passesFilters(d)) op = Math.min(op, 0.03);
 
     g.style('opacity', op);
 
@@ -792,19 +826,19 @@ function updateNodeStyles() {
     g.select('.n-boss-ring')
       .attr('r', r + 10)
       .attr('stroke', W.color)
-      .attr('opacity', isBoss ? 0.16 : 0);
+      .attr('opacity', (isBoss && op > 0.2) ? 0.16 : 0);
 
     // Terminal halo
     g.select('.n-halo')
       .attr('r', r + 5)
       .attr('stroke', d.terminalType === 'failure' ? '#f87171' : '#4ade80')
-      .attr('opacity', d.role === 'terminal' ? 0.55 : 0);
+      .attr('opacity', (d.role === 'terminal' && op > 0.25) ? 0.55 : 0);
 
     // Start ring
     g.select('.n-start-ring')
       .attr('r', r + 8)
       .attr('stroke', W.color)
-      .attr('opacity', isStart ? 0.5 : 0)
+      .attr('opacity', (isStart && op > 0.2) ? 0.5 : 0)
       .attr('stroke-width', isStart ? 1.5 : 1);
 
     // Selection ring
@@ -813,6 +847,34 @@ function updateNodeStyles() {
     else if (isHov) selRing.attr('r', r + 3).attr('stroke', W.color).attr('stroke-width', 1.5).attr('opacity', 0.65);
     else selRing.attr('opacity', 0);
 
+    // Relationship ring (colored ring indicating direction relative to selected node)
+    const relRing = g.select('.n-rel-ring');
+    if (hasSelection && !isSel) {
+      let relColor = null;
+      if (isBi) relColor = '#c084fc';   // purple = bidirectional
+      else if (isOut) relColor = '#f59e0b'; // amber = outgoing (navigation to)
+      else if (isInc) relColor = '#38bdf8'; // cyan = incoming (navigation from)
+      if (relColor) {
+        relRing.attr('r', r + 4).attr('stroke', relColor).attr('stroke-width', 2.5).attr('opacity', 0.75);
+      } else {
+        relRing.attr('opacity', 0);
+      }
+    } else {
+      relRing.attr('opacity', 0);
+    }
+
+    // Relationship arrow (direction symbol)
+    const relArrow = g.select('.n-rel-arrow');
+    if (hasSelection && !isSel && isDirectNeighbor) {
+      let arrow = '', arrowColor = '';
+      if (isBi) { arrow = '⟷'; arrowColor = '#c084fc'; }
+      else if (isOut) { arrow = '→'; arrowColor = '#f59e0b'; }
+      else if (isInc) { arrow = '←'; arrowColor = '#38bdf8'; }
+      relArrow.attr('x', 0).attr('y', -r - 6).text(arrow).attr('fill', arrowColor);
+    } else {
+      relArrow.text('');
+    }
+
     // Search glow
     g.select('.n-glow')
       .attr('r', r + 14)
@@ -820,38 +882,53 @@ function updateNodeStyles() {
       .attr('opacity', (isSearching && a > 0.45) ? a * 0.1 : 0);
 
     // Body
-    g.select('.n-body')
+    const bodyNode = g.select('.n-body');
+    const bodyStroke = isSel ? W.color
+      : (isOut ? '#f59e0b' : (isInc ? '#38bdf8' : (isBi ? '#c084fc' : fc)));
+    bodyNode
       .attr('r', r)
       .attr('fill', W.color + '33')
-      .attr('stroke', isSel ? W.color : fc)
-      .attr('stroke-width', isSel ? 2.5 : isBoss ? 2.2 : 1.5);
+      .attr('stroke', bodyStroke)
+      .attr('stroke-width', (isSel || isDirectNeighbor) ? 2.2 : isBoss ? 2.2 : 1.5);
 
     // Core
     g.select('.n-core')
       .attr('r', r * 0.45)
       .attr('fill', W.color)
-      .attr('opacity', (isBoss || isStart) ? 0.45 : 0);
+      .attr('opacity', (isBoss || isStart) && op > 0.25 ? 0.45 : 0);
 
     // Start dot
     g.select('.n-start-dot')
       .attr('r', 2.5)
       .attr('fill', W.color)
-      .attr('opacity', isStart ? 0.9 : 0);
+      .attr('opacity', isStart && op > 0.2 ? 0.9 : 0);
 
-    // Category dot (top-right of node)
+    // Category dot (top-right of node) — enhanced when selection mode is active
+    const catVisible = op > 0.1 || isSel || isHov;
     g.select('.n-cat-dot')
-      .attr('cx', r - 2)
-      .attr('cy', -r + 2)
+      .attr('cx', r - 1.5)
+      .attr('cy', -r + 1.5)
+      .attr('r', (hasSelection && catVisible && !isSel) ? 3 : 2.5)
       .attr('fill', CAT_COLORS[d._cat] || '#888')
-      .attr('opacity', 0.85);
+      .attr('opacity', catVisible ? 0.9 : 0);
+
+    // Category label (tiny text abbreviation next to category dot)
+    const catLabel = g.select('.n-cat-label');
+    if (hasSelection && catVisible && !isSel) {
+      const abbr = { controller: 'ctl', ui: 'ui', domain: 'dom', service: 'svc', infra: 'inf', other: 'oth' };
+      catLabel.attr('x', r - 1.5).attr('y', -r - 4)
+        .text(abbr[d._cat] || '?').attr('fill', CAT_COLORS[d._cat] || '#888');
+    } else {
+      catLabel.text('');
+    }
 
     // Label
     g.select('.n-label')
       .attr('y', r + 11)
       .text(d.label.length > 22 ? d.label.substring(0, 20) + '…' : d.label)
-      .attr('fill', (isSel || isHov) ? '#e8e8f0' : '#9494b8')
-      .attr('font-size', (isSel || isHov) ? 9.5 : 8.5)
-      .attr('font-weight', isSel ? 700 : 400);
+      .attr('fill', (isSel || isHov || isDirectNeighbor) ? '#e8e8f0' : '#9494b8')
+      .attr('font-size', (isSel || isHov) ? 9.5 : (isDirectNeighbor ? 9 : 8.5))
+      .attr('font-weight', (isSel || isDirectNeighbor) ? 700 : 400);
 
     // Search %
     g.select('.n-pct')
@@ -862,7 +939,7 @@ function updateNodeStyles() {
     // Note dot
     g.select('.n-note-dot')
       .attr('cx', r - 1.5).attr('cy', r - 1.5)
-      .attr('opacity', notes[d.id] ? 0.85 : 0);
+      .attr('opacity', notes[d.id] && op > 0.2 ? 0.85 : 0);
 
     // Pin
     g.select('.n-pin')
@@ -893,7 +970,22 @@ function updateNodeStyles() {
     else if (d.condition?.type !== 'always') linkDash = '5 3';
 
     let op = 0.22;
-    if (!showAll && !selected && !hovered) {
+    if (selected && !isSearching && !linePairs) {
+      // Selection mode: color edges by direction
+      if (sId === selected.id) {
+        linkColor = '#f59e0b'; // outgoing = amber
+        op = 0.72;
+      } else if (tId === selected.id) {
+        linkColor = '#38bdf8'; // incoming = cyan
+        op = 0.58;
+      } else if (outgoingIds.has(sId) || outgoingIds.has(tId) || incomingIds.has(sId) || incomingIds.has(tId) || bidirectionalIds.has(sId) || bidirectionalIds.has(tId)) {
+        op = 0.18;
+      } else if (twoHopIds.has(sId) || twoHopIds.has(tId)) {
+        op = 0.08;
+      } else {
+        op = 0.015;
+      }
+    } else if (!showAll && !selected && !hovered) {
       op = 0;
     } else if (!showAll) {
       const focus = (selected || hovered)?.id;
@@ -1219,6 +1311,20 @@ function updatePanel() {
         <button class="dp-clear-note" style="padding:3px 8px;border-radius:3px;font-size:9px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2)">Clear</button>
         <button class="dp-toggle-pin" data-station-id="\${selected.id}" style="margin-left:auto;padding:3px 8px;border-radius:3px;font-size:9px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2)">\${isPinned ? '📌 Unpin' : '📌 Pin'}</button>
       </div>
+    </div>
+
+    <div style="margin-top:8px;padding:6px 8px;background:var(--bg);border-radius:5px;border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <span style="font-size:7px;color:var(--text3);letter-spacing:.06em">GRAPH:</span>
+      <span style="font-size:7px;color:#f59e0b">●→ nav to</span>
+      <span style="font-size:7px;color:#38bdf8">●← nav from</span>
+      <span style="font-size:7px;color:#c084fc">●↔ both</span>
+      <span style="font-size:7px;color:var(--text3)">|</span>
+      <span style="font-size:7px;color:#f87171">●ctl</span>
+      <span style="font-size:7px;color:#4ade80">●svc</span>
+      <span style="font-size:7px;color:#4cc9f0">●ui</span>
+      <span style="font-size:7px;color:#a78bfa">●dom</span>
+      <span style="font-size:7px;color:#fbbf24">●inf</span>
+      <span style="font-size:7px;color:#888">●oth</span>
     </div>
   \`;
 }
