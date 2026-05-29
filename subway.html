@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subway — subway</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+/* ── RESET & BASE ── */
+*{margin:0;padding:0;box-sizing:border-box}
+:root {
+  --bg: #0b0b1a;
+  --bg2: #101028;
+  --bg3: #181838;
+  --border: #1e1e3a;
+  --text: #c8c8e0;
+  --text2: #8888aa;
+  --text3: #5a5a7a;
+  --accent: #7c8cf8;
+  --accent2: #4cc9f0;
+  --success: #4ade80;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --pill-bg: #141430;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ── */
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  height: 44px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  flex-shrink: 0;
+  z-index: 30;
+}
+.logo {
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #f87171, #7c8cf8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  flex-shrink: 0;
+}
+.title { font-size: 12px; font-weight: 800; letter-spacing: .08em; color: #e8e8f0; flex-shrink: 0; }
+.subtitle { font-size: 10px; color: var(--text3); flex-shrink: 0; }
+
+/* ── SEARCH ── */
+.search-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 340px;
+}
+.search-wrap input {
+  width: 100%;
+  padding: 5px 30px 5px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 11px;
+  outline: none;
+  transition: .2s;
+}
+.search-wrap input:focus { border-color: var(--accent); box-shadow: 0 0 10px #7c8cf822; }
+.search-wrap input::placeholder { color: var(--text3); }
+.search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 14px;
+  display: none;
+}
+.search-clear.visible { display: block; }
+
+/* ── HEADER BUTTONS ── */
+.hdr-btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 9px;
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: .05em;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  color: var(--text2);
+  transition: .15s;
+  white-space: nowrap;
+}
+.hdr-btn:hover { border-color: var(--accent); color: var(--accent); }
+.hdr-btn.active { background: #7c8cf822; border-color: var(--accent); color: var(--accent); }
+.hdr-btn.primary { color: var(--accent); }
+
+#filter-count {
+  font-size: 8px;
+  color: var(--accent);
+  background: #7c8cf822;
+  border-radius: 8px;
+  padding: 1px 5px;
+  margin-left: 2px;
+  display: none;
+}
+#filter-count.visible { display: inline; }
+
+/* ── FILTER PANEL (left slide) ── */
+#filter-panel {
+  position: fixed;
+  top: 44px;
+  left: 0;
+  bottom: 0;
+  width: 260px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  z-index: 25;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform .25s ease;
+  display: flex;
+  flex-direction: column;
+}
+#filter-panel.open { transform: translateX(0); }
+#filter-panel .fp-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#filter-panel .fp-header h3 {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: .06em;
+}
+#filter-panel .fp-header button {
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+#filter-panel .fp-header button:hover { color: var(--danger); }
+.fp-section {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.fp-section .fp-label {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--text3);
+  letter-spacing: .1em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.fp-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 10px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--text2);
+}
+.fp-row:hover { color: var(--text); }
+.fp-row input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 13px; height: 13px;
+}
+.fp-row .fp-color { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.fp-row .fp-role-icon { font-size: 10px; width: 14px; text-align: center; flex-shrink: 0; }
+
+/* ── WEIGHT SLIDERS ── */
+.weight-slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+.weight-slider .ws-label {
+  font-size: 9px;
+  color: var(--text2);
+  width: 70px;
+  flex-shrink: 0;
+}
+.weight-slider input[type="range"] {
+  flex: 1;
+  height: 3px;
+  -webkit-appearance: none;
+  background: var(--border);
+  border-radius: 3px;
+  outline: none;
+}
+.weight-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+.weight-slider .ws-val {
+  font-size: 8px;
+  color: var(--accent);
+  width: 24px;
+  text-align: right;
+}
+
+/* ── MAIN GRAPH AREA ── */
+#main-area {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+svg {
+  flex: 1;
+  display: block;
+  cursor: grab;
+  transition: margin-left .25s ease;
+}
+#main-area.filter-open svg { margin-left: 260px; }
+
+/* ── RIGHT DETAIL PANEL ── */
+#detail-panel {
+  position: fixed;
+  top: 44px;
+  right: 0;
+  bottom: 22px;
+  width: 300px;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  z-index: 25;
+  overflow-y: auto;
+  display: none;
+  flex-direction: column;
+}
+#detail-panel.open { display: flex; }
+#detail-panel .dp-content {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#detail-panel h3 { font-size: 14px; font-weight: 800; margin-bottom: 2px; }
+#detail-panel .dp-world {
+  font-size: 8px;
+  color: var(--text3);
+  letter-spacing: .1em;
+  margin-bottom: 6px;
+}
+#detail-panel .dp-desc { font-size: 10px; color: var(--text2); line-height: 1.6; }
+#detail-panel .dp-close {
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 16px;
+  cursor: pointer;
+  margin-left: auto;
+}
+#detail-panel .dp-close:hover { color: var(--danger); }
+.dp-weight-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 3px 0;
+}
+.dp-weight-row .wl {
+  font-size: 8px;
+  width: 70px;
+  color: var(--text3);
+  letter-spacing: .06em;
+}
+.dp-weight-row .wb {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg3);
+  overflow: hidden;
+}
+.dp-weight-row .wf {
+  height: 100%;
+  border-radius: 2px;
+}
+.dp-weight-row .wv {
+  font-size: 8px;
+  color: var(--text3);
+  width: 28px;
+  text-align: right;
+}
+
+.syn-list { font-size: 10px; color: var(--text2); line-height: 1.8; }
+.syn-list a { color: var(--accent); cursor: pointer; text-decoration: none; }
+.syn-list a:hover { text-decoration: underline; }
+.syn-tag {
+  display: inline-block;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 7px;
+  margin-left: 4px;
+}
+
+/* ── LEGEND TOOLTIP ── */
+#legend-float {
+  position: fixed;
+  bottom: 28px;
+  left: 12px;
+  display: flex;
+  gap: 10px;
+  font-size: 9px;
+  color: var(--text3);
+  flex-wrap: wrap;
+  z-index: 20;
+  pointer-events: none;
+}
+#legend-float .leg-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+#legend-float .leg-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+#legend-float .leg-line {
+  width: 14px; height: 2px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+/* ── STATUS BAR ── */
+.status-bar {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  font-size: 8px;
+  color: var(--text3);
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+  flex-shrink: 0;
+  z-index: 20;
+}
+.status-bar .sb-l { display: flex; gap: 12px; }
+
+/* ── TOOLTIP ── */
+#tooltip {
+  position: fixed;
+  padding: 5px 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 10px;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0;
+  max-width: 250px;
+  line-height: 1.4;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes pulse-slow {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--gc, #7c8cf8)88); }
+  50% { filter: drop-shadow(0 0 12px var(--gc, #7c8cf8)aa); }
+}
+.n-start-shiny { animation: pulse-slow 2.5s ease-in-out infinite; }
+
+/* ── NO RESULTS HINT ── */
+#hint-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 15;
+  opacity: 0;
+  transition: opacity .4s;
+}
+#hint-overlay.show { opacity: 1; }
+#hint-overlay .hint-text {
+  font-size: 13px;
+  color: var(--text3);
+  text-align: center;
+  line-height: 1.6;
+}
+#hint-overlay .hint-text strong { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">S</div>
+  <span class="title">SUBWAY</span>
+  <span class="subtitle">/ subway</span>
+
+  <button class="hdr-btn" id="btn-filters" title="Filters">☰ Filters <span id="filter-count"></span></button>
+
+  <div class="search-wrap">
+    <input id="search" placeholder="Search stations, files, concepts…" />
+    <button class="search-clear" id="search-clear">×</button>
+  </div>
+
+  <button class="hdr-btn primary active" id="btn-expand">▲ Start Only</button>
+  <button class="hdr-btn" id="btn-reset">↺ Reset</button>
+</header>
+
+<div id="main-area">
+  <div id="filter-panel">
+    <div class="fp-header">
+      <h3>Filters</h3>
+      <button id="btn-fp-close" title="Close filters">×</button>
+    </div>
+    <div class="fp-section" id="fp-worlds"><div class="fp-label">Domains (Worlds)</div></div>
+    <div class="fp-section" id="fp-lines"><div class="fp-label">Lines (Flows)</div></div>
+    <div class="fp-section" id="fp-roles"><div class="fp-label">Station Type</div></div>
+    <div class="fp-section" id="fp-authors"><div class="fp-label">Author</div></div>
+    <div class="fp-section" id="fp-weights"><div class="fp-label">Weight Filters</div></div>
+  </div>
+
+  <svg id="graph"></svg>
+
+  <div id="detail-panel">
+    <div class="dp-content" id="dp-content"></div>
+  </div>
+</div>
+
+<div id="legend-float"></div>
+<div id="tooltip"></div>
+<div id="hint-overlay"><div class="hint-text">Click a <strong>node</strong> for details<br>or press <strong>▲ Start Only</strong> to focus on entry points</div></div>
+
+<div class="status-bar">
+  <span class="sb-l">
+    <span>Drag · Scroll zoom · Click node · DblClick zoom</span>
+    <span id="sb-search" style="display:none"></span>
+    <span id="sb-line" style="display:none"></span>
+    <span id="sb-active" style="display:none"></span>
+  </span>
+  <span>
+    <span style="color:#4ade80">● low</span>
+    <span style="color:#fbbf24">● med</span>
+    <span style="color:#f87171">● high</span>
+    <span>risk</span>
+  </span>
+</div>
+
+<script>
+// ─── DATA ───
+const DATA = {"meta":{"project":"subway","version":"3.0","generated":"2026-05-25T10:00:00.000Z","entryPoint":"cli_entry","totalStations":32,"totalSynapses":66,"totalLines":6,"totalWorlds":8,"languages":["typescript"],"embeddings_model":"ollama:nomic-embed-text:latest"},"worlds":[{"id":"cli","name":"CLI & Entry Points","color":"#FF6B6B","description":"Command-line interface and MCP server entry points that bootstrap the entire pipeline. Dispatches to init, serve, embed, and serve commands.","stations":["cli_entry","mcp_server","index_library"]},{"id":"trace","name":"TRACE — Phase 1","color":"#4ECDC4","description":"AST-based code analysis: scans project files, detects entry points, navigation paths, conditions (if/switch/guard), import dependencies, and terminal states. Uses tree-sitter for parsing and AST walking.","stations":["scanner","parser","ast_walker","entry_point_detector","navigation_detector","condition_detector","dependency_detector","terminal_detector","trace_orchestrator"]},{"id":"weight","name":"WEIGHT — Phase 2","color":"#45B7D1","description":"Computes station weights: git churn frequency, betweenness centrality on the station graph, influence scoring, and dependency risk. Feeds into clustering and importance ranking.","stations":["churn_analyzer","centrality_analyzer","influence_analyzer","weight_orchestrator"]},{"id":"embed","name":"EMBED — Phase 3","color":"#96CEB4","description":"Generates semantic vector embeddings for stations using Ollama or OpenAI. Manages an in-memory vector store with cosine similarity for spreading-activation search. Supports batched embedding generation.","stations":["embed_config","ollama_provider","openai_provider","vector_store","embed_orchestrator"]},{"id":"narrate","name":"NARRATE — Phase 4","color":"#FFEAA7","description":"LLM-powered narration: generates human-readable descriptions for worlds, stations, synapses, and lines using batched API calls. Optional — subway.json is valid without narration.","stations":["narrate_config","llm_provider","prompt_builder","narrate_orchestrator"]},{"id":"output","name":"EMIT — Phase 5","color":"#DDA0DD","description":"Final emission: serializes the subway schema to JSON, formats output tables, and generates a self-contained D3.js HTML viewer with force-directed graph layout.","stations":["output_generator","viewer_generator"]},{"id":"mcp","name":"MCP Server","color":"#98D8C8","description":"Model Context Protocol server exposing 31 tools: 9 read tools for exploring existing maps, 14 build tools for interactive map creation, and 5 query tools for in-session inspection. Manages map session state.","stations":["mcp_session","mcp_read_tools","mcp_build_tools","mcp_index"]},{"id":"types","name":"Type System","color":"#F7DC6F","description":"Core TypeScript type definitions for the subway.json v3.0 schema: Station, Synapse, World, Line, SubwaySchema, and all internal pipeline types. Single source of truth for all type contracts.","stations":["type_definitions"]}],"stations":[{"id":"cli_entry","label":"CLI Entry (cli.ts)","world":"cli","role":"start","terminalType":null,"files":["src/cli.ts"],"description":"Commander-based CLI entry point. Dispatches to 'subway init' (full 5-phase pipeline), 'subway serve' (viewer generation), and 'subway embed' (standalone embedding). Orchestrates the entire pipeline from a single command.","weight":{"influence":0.95,"dependency":0.6,"churn":0.4,"centrality":0.9},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":25},{"id":"mcp_server","label":"MCP Server Entry (mcp-server.ts)","world":"cli","role":"start","terminalType":null,"files":["src/mcp-server.ts"],"description":"Alternative entry point: starts the Subway MCP server using @modelcontextprotocol/sdk. Registers all 31 tools and begins listening for MCP client connections (Claude Desktop, Cursor, etc.).","weight":{"influence":0.85,"dependency":0.5,"churn":0.3,"centrality":0.7},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":15},{"id":"index_library","label":"Library Index (index.ts)","world":"cli","role":"hub","terminalType":null,"files":["src/index.ts"],"description":"Package entry point for programmatic usage. Exports subway() main function, generateViewerHtml(), and all public types. Re-exports the complete public API surface.","weight":{"influence":0.8,"dependency":0.4,"churn":0.2,"centrality":0.6},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":10},{"id":"scanner","label":"File Scanner","world":"trace","role":"start","terminalType":null,"files":["src/trace/scanner.ts"],"description":"Recursively scans the project directory for source files, filtering by language extensions (.ts, .tsx, .js, .jsx) and ignoring node_modules, dist, .git. Returns an array of SourceFile objects with language classification.","weight":{"influence":0.75,"dependency":0.2,"churn":0.15,"centrality":0.55},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":12},{"id":"parser","label":"Tree-sitter Parser","world":"trace","role":"hub","terminalType":null,"files":["src/trace/parser.ts"],"description":"Manages a pool of tree-sitter parsers (JavaScript + TypeScript via web-tree-sitter). Provides parseFile() for AST generation and isInitialized() for readiness checks. Parsers are lazily initialized and cached by language.","weight":{"influence":0.9,"dependency":0.55,"churn":0.25,"centrality":0.85},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":18},{"id":"ast_walker","label":"AST Walker","world":"trace","role":"hub","terminalType":null,"files":["src/trace/walk.ts"],"description":"Utility functions for traversing tree-sitter ASTs: walkNode() for recursive descent and findChildByType() for pattern matching. Used by all detectors to locate specific AST node types.","weight":{"influence":0.7,"dependency":0.3,"churn":0.1,"centrality":0.65},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":8},{"id":"entry_point_detector","label":"Entry Point Detector","world":"trace","role":"checkpoint","terminalType":null,"files":["src/trace/entry-point.ts"],"description":"Detects application entry points by finding top-level function calls (e.g., main(), app.listen()), module-level side effects, and framework bootstrap patterns. Returns DetectedEntryPoint objects with call signatures.","weight":{"influence":0.65,"dependency":0.35,"churn":0.15,"centrality":0.5},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":10},{"id":"navigation_detector","label":"Navigation Detector","world":"trace","role":"checkpoint","terminalType":null,"files":["src/trace/navigation.ts"],"description":"Detects navigation and routing patterns: React Router <Route> components, GoRouter definitions, Next.js pages, Express route handlers, and Vue Router configs. Returns DetectedNavigation objects with path and component references.","weight":{"influence":0.65,"dependency":0.35,"churn":0.15,"centrality":0.5},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":10},{"id":"condition_detector","label":"Condition Detector","world":"trace","role":"checkpoint","terminalType":null,"files":["src/trace/conditions.ts"],"description":"Detects conditional logic: if/else, switch/case, ternary expressions, guard clauses, try/catch blocks, and logical short-circuits. Classifies each condition by type (api_response, user_role, device_state, config_flag, data_value, always).","weight":{"influence":0.75,"dependency":0.4,"churn":0.2,"centrality":0.6},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":14},{"id":"dependency_detector","label":"Dependency Detector","world":"trace","role":"checkpoint","terminalType":null,"files":["src/trace/dependencies.ts"],"description":"Extracts import/require statements to build a directed dependency graph. Tracks import source, imported symbols, and whether the dependency is internal (project file) or external (npm package).","weight":{"influence":0.7,"dependency":0.35,"churn":0.2,"centrality":0.55},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":12},{"id":"terminal_detector","label":"Terminal Detector","world":"trace","role":"checkpoint","terminalType":null,"files":["src/trace/terminal.ts"],"description":"Detects terminal/end states: return statements at function boundaries, throw/Error constructions for failure paths, process.exit() for process termination, and response.send()/res.json() for API endpoints.","weight":{"influence":0.55,"dependency":0.3,"churn":0.1,"centrality":0.4},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":8},{"id":"trace_orchestrator","label":"TRACE Orchestrator","world":"trace","role":"hub","terminalType":null,"files":["src/trace/index.ts"],"description":"Phase 1 orchestrator: runs the complete trace pipeline — scanFiles → initParser → detectEntryPoints → detectNavigation → detectConditions → detectDependencies → detectTerminals. Aggregates all trace results into a unified trace report.","weight":{"influence":0.85,"dependency":0.6,"churn":0.3,"centrality":0.8},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":20},{"id":"churn_analyzer","label":"Churn Analyzer","world":"weight","role":"checkpoint","terminalType":null,"files":["src/weight/churn.ts"],"description":"Computes file change frequency via git log --numstat. Returns ChurnEntry[] with commit count, lines added/removed, and author breakdowns. Normalized to 0–1 weights across all stations.","weight":{"influence":0.5,"dependency":0.25,"churn":0.1,"centrality":0.3},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":8},{"id":"centrality_analyzer","label":"Centrality Analyzer","world":"weight","role":"checkpoint","terminalType":null,"files":["src/weight/centrality.ts"],"description":"Computes betweenness centrality on the station-synapse graph. Identifies bottleneck stations that sit on the most shortest paths — high centrality means more flows pass through this station.","weight":{"influence":0.45,"dependency":0.2,"churn":0.1,"centrality":0.35},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":6},{"id":"influence_analyzer","label":"Influence Scorer","world":"weight","role":"checkpoint","terminalType":null,"files":["src/weight/influence.ts"],"description":"Computes influence (how many other stations depend on this one) and dependency (risk from external dependencies / low test coverage). Uses the dependency graph from Phase 1.","weight":{"influence":0.5,"dependency":0.25,"churn":0.1,"centrality":0.3},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":7},{"id":"weight_orchestrator","label":"WEIGHT Orchestrator","world":"weight","role":"hub","terminalType":null,"files":["src/weight/index.ts"],"description":"Phase 2 orchestrator: runs computeChurn → computeCentrality → computeInfluence → computeDependencyScore. Normalizes all weights to 0–1 and assigns them to each station in the schema.","weight":{"influence":0.75,"dependency":0.45,"churn":0.2,"centrality":0.65},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":14},{"id":"embed_config","label":"Embedding Config","world":"embed","role":"checkpoint","terminalType":null,"files":["src/embed/config.ts"],"description":"Resolves embedding configuration: provider selection (ollama | openai), model name, API endpoint, API key from env vars (OLLAMA_HOST, OPENAI_API_KEY), and batch size settings.","weight":{"influence":0.55,"dependency":0.3,"churn":0.1,"centrality":0.35},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":6},{"id":"ollama_provider","label":"Ollama Embedding Provider","world":"embed","role":"checkpoint","terminalType":null,"files":["src/embed/ollama.ts"],"description":"Generates embeddings via Ollama's /api/embed endpoint. Uses nomic-embed-text (default) or any Ollama-pulled embedding model. Supports batched embedding generation for efficiency.","weight":{"influence":0.6,"dependency":0.4,"churn":0.15,"centrality":0.4},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":8},{"id":"openai_provider","label":"OpenAI Embedding Provider","world":"embed","role":"checkpoint","terminalType":null,"files":["src/embed/openai.ts"],"description":"Generates embeddings via OpenAI's /v1/embeddings endpoint. Uses text-embedding-3-small (default). Requires OPENAI_API_KEY. Supports batched embedding generation.","weight":{"influence":0.55,"dependency":0.45,"churn":0.1,"centrality":0.35},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":6},{"id":"vector_store","label":"Vector Store","world":"embed","role":"checkpoint","terminalType":null,"files":["src/embed/vector-store.ts"],"description":"In-memory vector store with cosine similarity search. Stores station embedding vectors and supports spreading-activation queries for semantic station search. Used by subway_search and spreading activation algorithm.","weight":{"influence":0.7,"dependency":0.35,"churn":0.15,"centrality":0.55},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":10},{"id":"embed_orchestrator","label":"EMBED Orchestrator","world":"embed","role":"hub","terminalType":null,"files":["src/embed/index.ts"],"description":"Phase 3 orchestrator: builds station corpus from names and descriptions, resolves embedding config, batches stations, calls provider API, and populates station.embedding[] vectors in the schema. Handles rate limiting and retries.","weight":{"influence":0.8,"dependency":0.5,"churn":0.25,"centrality":0.7},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":16},{"id":"narrate_config","label":"Narration Config","world":"narrate","role":"checkpoint","terminalType":null,"files":["src/narrate/config.ts"],"description":"Resolves LLM narration configuration: provider (ollama | openai | anthropic), model name, API key from environment. Controls whether narration is enabled (optional — maps are valid without it).","weight":{"influence":0.35,"dependency":0.2,"churn":0.05,"centrality":0.2},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":4},{"id":"llm_provider","label":"LLM Provider","world":"narrate","role":"checkpoint","terminalType":null,"files":["src/narrate/llm.ts"],"description":"LLM provider interface and factory. Creates provider instances (Ollama, OpenAI, Anthropic) for narration text generation. Each provider implements a generateCompletion() method with a unified interface.","weight":{"influence":0.5,"dependency":0.35,"churn":0.1,"centrality":0.35},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":6},{"id":"prompt_builder","label":"Prompt Builder","world":"narrate","role":"checkpoint","terminalType":null,"files":["src/narrate/prompts.ts"],"description":"Constructs LLM prompts for narration: world naming prompts, station description prompts, synapse annotation prompts, and line generation prompts. Uses structured templates with JSON output formatting instructions.","weight":{"influence":0.45,"dependency":0.25,"churn":0.1,"centrality":0.3},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":6},{"id":"narrate_orchestrator","label":"NARRATE Orchestrator","world":"narrate","role":"hub","terminalType":null,"files":["src/narrate/index.ts"],"description":"Phase 4 orchestrator: runs batched LLM narration for worlds → stations → synapses → lines. Uses batch optimization to minimize API calls. Gracefully degrades if LLM is unavailable — subway.json is valid without narration.","weight":{"influence":0.6,"dependency":0.45,"churn":0.2,"centrality":0.5},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":12},{"id":"output_generator","label":"Output Generator","world":"output","role":"terminal","terminalType":"success","files":["src/output/index.ts"],"description":"Phase 5: serializes the complete SubwaySchema to a formatted subway.json file. Generates stats tables, CLI output formatting, and file I/O for map persistence. Final step of the build pipeline.","weight":{"influence":0.55,"dependency":0.3,"churn":0.15,"centrality":0.4},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":10},{"id":"viewer_generator","label":"Viewer HTML Generator","world":"output","role":"terminal","terminalType":"success","files":["src/generate-viewer.ts"],"description":"Generates a self-contained subway.html D3.js force-directed graph viewer. No server, no npm install needed — open in any browser. Renders stations as nodes, synapses as edges, worlds as color groups, and lines as highlighted paths.","weight":{"influence":0.7,"dependency":0.4,"churn":0.3,"centrality":0.55},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":18},{"id":"mcp_session","label":"MCP Map Session","world":"mcp","role":"hub","terminalType":null,"files":["src/mcp/session.ts"],"description":"In-memory map session state: holds the active SubwaySchema being built, project root, scan results, and mutation methods (addStation, addSynapse, addWorld, addLine). Used by build tools and query tools.","weight":{"influence":0.8,"dependency":0.45,"churn":0.2,"centrality":0.75},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":16},{"id":"mcp_read_tools","label":"MCP Read Tools (9)","world":"mcp","role":"hub","terminalType":null,"files":["src/mcp/tools.ts"],"description":"9 read tools for exploring loaded subway.json: subway_search (spreading activation), subway_station (details), subway_path (find path), subway_impact (blast radius), subway_conditions (all conditions to target), subway_onboard (learning path), subway_line (end-to-end flow), subway_busrisk (author bottleneck), subway_ask (NL Q&A).","weight":{"influence":0.75,"dependency":0.5,"churn":0.25,"centrality":0.7},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":20},{"id":"mcp_build_tools","label":"MCP Build Tools (14+5)","world":"mcp","role":"hub","terminalType":null,"files":["src/mcp/build-tools.ts"],"description":"14 build tools + 5 query tools for interactive map creation: subway_init_map, subway_read_file, subway_read_dir, subway_add_world, subway_add_station, subway_add_synapse, subway_add_line, subway_save_map, subway_serve, subway_status, subway_list_*, subway_scan, subway_current_map. Also 5 query tools for in-session inspection.","weight":{"influence":0.85,"dependency":0.55,"churn":0.35,"centrality":0.8},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":25},{"id":"mcp_index","label":"MCP Tool Registry","world":"mcp","role":"hub","terminalType":null,"files":["src/mcp/index.ts"],"description":"Central MCP server registration: creates the McpServer instance, registers all 31 tools (9 read + 14 build + 5 query), and wires them to session state and read/query implementations. The hub connecting MCP clients to Subway's full tool surface.","weight":{"influence":0.9,"dependency":0.65,"churn":0.3,"centrality":0.85},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":22},{"id":"type_definitions","label":"Type Definitions","world":"types","role":"importance","terminalType":null,"files":["src/types/index.ts"],"description":"Single source of truth for all Subway type contracts. Defines SubwaySchema, Station, Synapse (with ConditionType enum), World, Line, StationWeights, and all internal types (SourceFile, DetectedCondition, etc.). Every module depends on this file.","weight":{"influence":0.95,"dependency":0.15,"churn":0.1,"centrality":0.9},"authors":["vince"],"lastModified":"2026-05-25T00:00:00.000Z","commitCount":15}],"synapses":[{"from":"cli_entry","to":"trace_orchestrator","condition":{"description":"User runs 'subway init' — starts full 5-phase pipeline","type":"config_flag","value":"command === 'init'"},"direction":"forward","isCritical":true,"strength":0.95},{"from":"cli_entry","to":"embed_orchestrator","condition":{"description":"User runs 'subway embed' — standalone embedding generation","type":"config_flag","value":"command === 'embed'"},"direction":"forward","isCritical":false,"strength":0.7},{"from":"cli_entry","to":"viewer_generator","condition":{"description":"User runs 'subway serve' — generate viewer from existing subway.json","type":"config_flag","value":"command === 'serve'"},"direction":"forward","isCritical":false,"strength":0.7},{"from":"index_library","to":"trace_orchestrator","condition":{"description":"Programmatic usage: import { subway } and call to generate map","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.8},{"from":"index_library","to":"output_generator","condition":{"description":"Programmatic usage: emit phase after pipeline completion","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.8},{"from":"index_library","to":"viewer_generator","condition":{"description":"Programmatic usage: generateViewerHtml() export","type":"always","value":""},"direction":"forward","isCritical":false,"strength":0.6},{"from":"trace_orchestrator","to":"scanner","condition":{"description":"Phase 1 step 1: scan project for source files","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.9},{"from":"trace_orchestrator","to":"parser","condition":{"description":"Phase 1 step 2: initialize tree-sitter parsers for detected languages","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.9},{"from":"trace_orchestrator","to":"entry_point_detector","condition":{"description":"Phase 1 step 3: detect entry points in scanned files","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"trace_orchestrator","to":"navigation_detector","condition":{"description":"Phase 1 step 4: detect navigation patterns","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"trace_orchestrator","to":"condition_detector","condition":{"description":"Phase 1 step 5: detect conditional logic (if/switch/try)","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"trace_orchestrator","to":"dependency_detector","condition":{"description":"Phase 1 step 6: extract import dependencies","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"trace_orchestrator","to":"terminal_detector","condition":{"description":"Phase 1 step 7: detect terminal end states","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.8},{"from":"trace_orchestrator","to":"weight_orchestrator","condition":{"description":"Phase 1 complete → hand off trace report to Phase 2","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.95},{"from":"entry_point_detector","to":"parser","condition":{"description":"Needs AST: calls parseFile to get tree-sitter Tree","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"entry_point_detector","to":"ast_walker","condition":{"description":"Traverses AST: uses walkNode to find call expressions","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"navigation_detector","to":"parser","condition":{"description":"Needs AST: calls parseFile to get tree-sitter Tree","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"navigation_detector","to":"ast_walker","condition":{"description":"Traverses AST: uses walkNode and findChildByType for route patterns","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"condition_detector","to":"parser","condition":{"description":"Needs AST: calls parseFile to get tree-sitter Tree","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"condition_detector","to":"ast_walker","condition":{"description":"Traverses AST: uses walkNode and findChildByType for if/switch/try nodes","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"dependency_detector","to":"parser","condition":{"description":"Needs AST: calls parseFile to get tree-sitter Tree","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"dependency_detector","to":"ast_walker","condition":{"description":"Traverses AST: uses walkNode and findChildByType for import statements","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"terminal_detector","to":"parser","condition":{"description":"Needs AST: calls parseFile to get tree-sitter Tree","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.8},{"from":"terminal_detector","to":"ast_walker","condition":{"description":"Traverses AST: uses walkNode for return/throw/exit patterns","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.8},{"from":"weight_orchestrator","to":"churn_analyzer","condition":{"description":"Phase 2 step 1: compute git churn via git log","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"weight_orchestrator","to":"centrality_analyzer","condition":{"description":"Phase 2 step 2: compute betweenness centrality on station graph","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"weight_orchestrator","to":"influence_analyzer","condition":{"description":"Phase 2 step 3: compute influence and dependency scores","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"weight_orchestrator","to":"embed_orchestrator","condition":{"description":"Phase 2 complete → hand off weighted stations to Phase 3","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.95},{"from":"embed_orchestrator","to":"embed_config","condition":{"description":"Phase 3 step 1: resolve embedding provider config","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"embed_orchestrator","to":"ollama_provider","condition":{"description":"Provider is ollama: generate embeddings via local Ollama instance","type":"config_flag","value":"provider === 'ollama'"},"direction":"forward","isCritical":false,"strength":0.75},{"from":"embed_orchestrator","to":"openai_provider","condition":{"description":"Provider is openai: generate embeddings via OpenAI API","type":"config_flag","value":"provider === 'openai'"},"direction":"forward","isCritical":false,"strength":0.75},{"from":"ollama_provider","to":"vector_store","condition":{"description":"Embeddings generated → store in vector store for similarity search","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.8},{"from":"openai_provider","to":"vector_store","condition":{"description":"Embeddings generated → store in vector store for similarity search","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.8},{"from":"embed_orchestrator","to":"narrate_orchestrator","condition":{"description":"Phase 3 complete → embeddings populated, hand off to Phase 4 narration","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.9},{"from":"narrate_orchestrator","to":"narrate_config","condition":{"description":"Phase 4 step 1: resolve LLM narration config","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.8},{"from":"narrate_orchestrator","to":"llm_provider","condition":{"description":"Phase 4 step 2: initialize LLM provider (Ollama/OpenAI/Anthropic)","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"narrate_orchestrator","to":"prompt_builder","condition":{"description":"Phase 4 step 3: build prompts for worlds, stations, synapses, lines","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.8},{"from":"narrate_orchestrator","to":"output_generator","condition":{"description":"Phase 4 complete or skipped (LLM unavailable) → hand off to Phase 5 emission","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.9},{"from":"narrate_orchestrator","to":"output_generator","condition":{"description":"LLM unavailable: gracefully skip narration, proceed to emit with auto-generated descriptions","type":"api_response","value":"LLM connection failed"},"direction":"forward","isCritical":true,"strength":0.7},{"from":"output_generator","to":"viewer_generator","condition":{"description":"subway.json written → generate self-contained D3 HTML viewer","type":"always","value":""},"direction":"forward","isCritical":false,"strength":0.8},{"from":"mcp_server","to":"mcp_index","condition":{"description":"MCP server starts → register all 31 tools and begin listening","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.95},{"from":"mcp_index","to":"mcp_session","condition":{"description":"Build-tool call received → initialize or access active map session","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.9},{"from":"mcp_index","to":"mcp_build_tools","condition":{"description":"Tool invocation for build/query tools: init, add_world, add_station, add_synapse, add_line, save, serve, status, list, scan, query_*","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.9},{"from":"mcp_index","to":"mcp_read_tools","condition":{"description":"Tool invocation for read tools: search, station, path, impact, conditions, onboard, line, busrisk, ask","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"mcp_build_tools","to":"mcp_session","condition":{"description":"Build tool reads/updates session state (add stations, synapses, worlds, lines)","type":"always","value":""},"direction":"both","isCritical":true,"strength":0.95},{"from":"mcp_build_tools","to":"scanner","condition":{"description":"subway_init_map or subway_scan: scan project directory for source files","type":"config_flag","value":"tool === 'subway_init_map' || tool === 'subway_scan'"},"direction":"forward","isCritical":true,"strength":0.8},{"from":"mcp_build_tools","to":"output_generator","condition":{"description":"subway_save_map: persist session schema to subway.json on disk","type":"config_flag","value":"tool === 'subway_save_map'"},"direction":"forward","isCritical":true,"strength":0.85},{"from":"mcp_build_tools","to":"viewer_generator","condition":{"description":"subway_serve: generate self-contained HTML viewer from schema","type":"config_flag","value":"tool === 'subway_serve'"},"direction":"forward","isCritical":true,"strength":0.85},{"from":"mcp_read_tools","to":"vector_store","condition":{"description":"subway_search: use vector store for spreading-activation semantic search","type":"config_flag","value":"tool === 'subway_search'"},"direction":"forward","isCritical":true,"strength":0.8},{"from":"mcp_read_tools","to":"mcp_session","condition":{"description":"Read tools access session to traverse station graph, compute paths, impact, conditions","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"type_definitions","to":"scanner","condition":{"description":"Imported by all modules: provides SourceFile, Station, Synapse, World, Line types","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.95},{"from":"type_definitions","to":"trace_orchestrator","condition":{"description":"Provides SubwaySchema, DetectedCondition, DetectedNavigation, FileDependency types","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.95},{"from":"type_definitions","to":"weight_orchestrator","condition":{"description":"Provides StationWeights, Station, Synapse types for weight computation","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.95},{"from":"type_definitions","to":"embed_orchestrator","condition":{"description":"Provides Station.embedding type for vector storage","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.9},{"from":"type_definitions","to":"narrate_orchestrator","condition":{"description":"Provides World, Station, Synapse, Line types for LLM narration","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"type_definitions","to":"output_generator","condition":{"description":"Provides SubwaySchema top-level type for serialization","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.9},{"from":"type_definitions","to":"viewer_generator","condition":{"description":"Provides SubwaySchema type for viewer HTML generation","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"type_definitions","to":"mcp_session","condition":{"description":"Provides SubwaySchema, Station, Synapse, World, Line types for session state","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.9},{"from":"type_definitions","to":"mcp_build_tools","condition":{"description":"Provides type contracts for all build tool parameter validation via Zod","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"type_definitions","to":"mcp_read_tools","condition":{"description":"Provides SubwaySchema, Station, Synapse types for read tool responses","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"mcp_index","to":"type_definitions","condition":{"description":"MCP server imports types for Zod schemas and tool parameter validation","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"cli_entry","to":"type_definitions","condition":{"description":"CLI imports types for pipeline orchestration contracts","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.8},{"from":"embed_orchestrator","to":"vector_store","condition":{"description":"After generating embeddings, populate vector store for search","type":"always","value":""},"direction":"forward","isCritical":true,"strength":0.85},{"from":"viewer_generator","to":"output_generator","condition":{"description":"Viewer needs subway.json to be written first; if not, generate it","type":"data_value","value":"subway.json exists"},"direction":"back","isCritical":false,"strength":0.5},{"from":"scanner","to":"trace_orchestrator","condition":{"description":"File scan complete → return SourceFile[] to orchestrator","type":"always","value":""},"direction":"back","isCritical":true,"strength":0.9},{"from":"parser","to":"trace_orchestrator","condition":{"description":"Parser initialized → orchestrator can proceed with detection","type":"api_response","value":"isInitialized() === true"},"direction":"back","isCritical":true,"strength":0.85}],"lines":[{"id":"line_full_pipeline","name":"Full 5-Phase Map Build","world":"cli","color":"#FF6B6B","path":["cli_entry","trace_orchestrator","scanner","parser","entry_point_detector","navigation_detector","condition_detector","dependency_detector","terminal_detector","weight_orchestrator","churn_analyzer","centrality_analyzer","influence_analyzer","embed_orchestrator","embed_config","ollama_provider","vector_store","narrate_orchestrator","output_generator","viewer_generator"],"conditions":["User runs 'subway init'","All 5 phases execute sequentially: TRACE → WEIGHT → EMBED → NARRATE → EMIT","Each detector uses tree-sitter AST parsing","Embeddings via Ollama (nomic-embed-text) or OpenAI","Narration gracefully skipped if LLM unavailable","Final output: subway.json + subway.html viewer"],"outcome":"success"},{"id":"line_mcp_interactive_build","name":"MCP Interactive Map Building","world":"mcp","color":"#98D8C8","path":["mcp_server","mcp_index","mcp_session","mcp_build_tools","scanner","output_generator","viewer_generator"],"conditions":["MCP server starts via 'subway-mcp' binary","Client connects (Claude Desktop, Cursor, etc.)","LLM calls subway_init_map → subway_read_file → subway_add_world → subway_add_station → subway_add_synapse → subway_add_line","subway_save_map persists to subway.json","subway_serve generates viewer HTML"],"outcome":"success"},{"id":"line_mcp_explore","name":"MCP Map Exploration","world":"mcp","color":"#98D8C8","path":["mcp_server","mcp_index","mcp_read_tools","vector_store","mcp_session"],"conditions":["Existing subway.json loaded","subway_search uses spreading activation via vector store","subway_impact computes blast radius","subway_path finds shortest path between stations","subway_ask answers natural language questions"],"outcome":"success"},{"id":"line_embed_only","name":"Standalone Embedding Generation","world":"cli","color":"#FF6B6B","path":["cli_entry","embed_orchestrator","embed_config","ollama_provider","vector_store","output_generator"],"conditions":["User runs 'subway embed'","Only Phase 3 executes","Requires existing subway.json with stations but no embeddings","Populates station.embedding[] vectors","Providers: Ollama (local, free) or OpenAI (cloud, paid)"],"outcome":"success"},{"id":"line_serve_only","name":"Serve Existing Map","world":"cli","color":"#FF6B6B","path":["cli_entry","output_generator","viewer_generator"],"conditions":["User runs 'subway serve'","subway.json must already exist","Skips TRACE/WEIGHT/EMBED/NARRATE phases","Reads subway.json → generates self-contained subway.html","No server needed — open in any browser"],"outcome":"success"},{"id":"line_no_llm","name":"Pipeline Without Narration","world":"cli","color":"#FFEAA7","path":["cli_entry","trace_orchestrator","weight_orchestrator","embed_orchestrator","narrate_orchestrator","output_generator","viewer_generator"],"conditions":["All 5 phases execute","LLM unavailable or API key missing","Narrate gracefully skips with auto-generated descriptions","Map is still fully functional without LLM narration"],"outcome":"partial"}]};
+const STATIONS = DATA.stations;
+const SYNAPSES = DATA.synapses;
+const WORLDS = DATA.worlds;
+const LINES = DATA.lines;
+
+// ─── STATIC MAPS ───
+const worldMap = Object.fromEntries(WORLDS.map(w => [w.id, w]));
+const stationMap = Object.fromEntries(STATIONS.map(s => [s.id, s]));
+
+// ─── AUTO-DETECT STATION CATEGORIES FROM FILES/LABEL ───
+function detectCategory(s) {
+  const corpus = [s.label, s.id, s.description, ...(s.files||[])].join(' ').toLowerCase();
+  // Controllers / handlers (MVC patterns, route handlers, presenters, view-models)
+  if (/controller|handler|route|middleware|presenter|viewmodel|vm|action|endpoint|resolver|gateway|interceptor/
+    .test(corpus)) return 'controller';
+  // UI / Views / Pages
+  if (/view|page|screen|component|render|template|html|jsx|tsx|widget|dialog|modal|layout|panel|form|button|card/
+    .test(corpus)) return 'ui';
+  // Models / Domain / Entities
+  if (/model|entity|schema|domain|type|interface|struct|class|object|record|dto|vo|value.object/
+    .test(corpus) && !/controller|handler|route|view|page|screen|component/.test(corpus))
+    return 'domain';
+  // Services / Providers
+  if (/service|provider|usecase|use.case|interactor|repository|adapter|facade|factory|builder|strategy/
+    .test(corpus)) return 'service';
+  // Infra / Config / Util
+  if (/config|db|database|cache|queue|logger|util|helper|constant|enum|migration|seed|fixture|test|spec|mock/
+    .test(corpus)) return 'infra';
+  return 'other';
+}
+STATIONS.forEach(s => { s._cat = detectCategory(s); });
+
+// ─── DETECT LINK TYPE ───
+function detectLinkType(fromId, toId) {
+  const f = stationMap[fromId];
+  const t = stationMap[toId];
+  if (!f || !t) return 'mixed';
+  if (f._cat === t._cat) return f._cat + '-' + f._cat; // e.g., "ui-ui", "controller-controller"
+  return 'cross'; // cross-boundary
+}
+
+// ─── ROLE DISPLAY ───
+const CAT_LABELS = {
+  controller: 'Controller / Handler',
+  ui: 'UI / View',
+  domain: 'Domain / Model',
+  service: 'Service',
+  infra: 'Infra / Config',
+  other: 'Other'
+};
+const CAT_ICONS = {
+  controller: '⚙', ui: '▣', domain: '◆', service: '◇', infra: '⬡', other: '●'
+};
+const CAT_COLORS = {
+  controller: '#f87171', ui: '#4cc9f0', domain: '#a78bfa',
+  service: '#4ade80', infra: '#fbbf24', other: '#888'
+};
+
+const ROLE_ICONS = {
+  start: '▶', hub: '⬢', checkpoint: '◇',
+  importance: '★', terminal: '■', boss: '◆'
+};
+
+// ─── COLOR HELPERS ───
+function fragColor(v) {
+  if (v >= 0.75) return '#f87171';
+  if (v >= 0.5) return '#fb923c';
+  if (v >= 0.25) return '#fbbf24';
+  return '#4ade80';
+}
+
+function nodeRadius(s) {
+  const base = 8;
+  const imp = (s.weight?.centrality || 0) * 0.5 + (s.weight?.influence || 0) * 0.5;
+  return Math.round(base * (0.7 + imp * 1.4));
+}
+
+// ─── STATE ───
+let selected = null;
+let hovered = null;
+let selectedLine = null;
+let showAll = true;
+let filterPanelOpen = false;
+let transform = { x: 0, y: 0, k: 1 };
+let searchQuery = '';
+let pinned = new Set();
+let notes = {};
+
+// Active filters
+let activeFilters = {
+  worlds: Object.fromEntries(WORLDS.map(w => [w.id, true])),
+  lines: {},
+  roles: Object.fromEntries(['start','hub','checkpoint','importance','terminal','boss'].map(r => [r, true])),
+  categories: Object.fromEntries(Object.keys(CAT_LABELS).map(c => [c, true])),
+  authors: {}, // {name: true}
+  weightMin: { influence: 0, dependency: 0, churn: 0, centrality: 0 }
+};
+
+// Build author list
+const allAuthors = [...new Set(STATIONS.flatMap(s => s.authors || []))].sort();
+allAuthors.forEach(a => { activeFilters.authors[a] = true; });
+
+// ─── START NODE DETECTION ───
+const startIds = new Set(STATIONS.filter(s => s.role === 'start').map(s => s.id));
+if (startIds.size === 0) {
+  const ep = DATA.meta?.entryPoint;
+  if (ep && stationMap[ep]) startIds.add(ep);
+  if (startIds.size === 0 && STATIONS.length > 0) startIds.add(STATIONS[0].id);
+}
+function isRoot(s) { return startIds.has(s.id); }
+
+// ─── FILTER MATCH ───
+function passesFilters(s) {
+  if (!activeFilters.worlds[s.world]) return false;
+  if (!activeFilters.roles[s.role]) return false;
+  if (!activeFilters.categories[s._cat]) return false;
+  if (s.authors?.length && !s.authors.some(a => activeFilters.authors[a])) return false;
+  const w = s.weight || {};
+  if ((w.influence || 0) < activeFilters.weightMin.influence) return false;
+  if ((w.dependency || w.fragility || 0) < activeFilters.weightMin.dependency) return false;
+  if ((w.churn || 0) < activeFilters.weightMin.churn) return false;
+  if ((w.centrality || 0) < activeFilters.weightMin.centrality) return false;
+  return true;
+}
+
+// Active filter count
+function activeFilterCount() {
+  let n = 0;
+  if (Object.values(activeFilters.worlds).some(v => !v)) n++;
+  if (Object.values(activeFilters.roles).some(v => !v)) n++;
+  if (Object.values(activeFilters.categories).some(v => !v)) n++;
+  if (Object.values(activeFilters.authors).some(v => !v)) n++;
+  if (activeFilters.weightMin.influence > 0) n++;
+  if (activeFilters.weightMin.dependency > 0) n++;
+  if (activeFilters.weightMin.churn > 0) n++;
+  if (activeFilters.weightMin.centrality > 0) n++;
+  return n;
+}
+
+// ─── SEARCH ───
+function computeActivations(query) {
+  if (!query.trim()) return {};
+  const q = query.toLowerCase();
+  const act = {};
+  STATIONS.forEach(s => {
+    const corpus = [s.label, s.description, s.world, ...(s.files||[])].join(' ').toLowerCase();
+    let score = 0;
+    if (s.label.toLowerCase().includes(q)) score = 0.96;
+    else if (s.id.toLowerCase().includes(q)) score = 0.88;
+    else if (s.world.toLowerCase().includes(q)) score = 0.65;
+    else if (corpus.includes(q)) score = 0.72;
+    else {
+      // Fuzzy word match
+      const words = q.split(/\s+/);
+      const matchCount = words.filter(w => corpus.includes(w)).length;
+      if (matchCount > 0) score = 0.45 + matchCount * 0.15;
+    }
+    if (score > 0) act[s.id] = Math.min(score, 1);
+  });
+  // 1-hop spread
+  for (let hop = 0; hop < 2; hop++) {
+    const snap = {...act};
+    SYNAPSES.forEach(syn => {
+      const fa = snap[syn.from] || 0;
+      if (fa > 0.1) act[syn.to] = Math.max(act[syn.to] || 0, fa * (syn.strength || 0.5) * 0.35);
+      const ta = snap[syn.to] || 0;
+      if (ta > 0.1) act[syn.from] = Math.max(act[syn.from] || 0, ta * (syn.strength || 0.5) * 0.35);
+    });
+  }
+  return act;
+}
+
+// ─── D3 SETUP ───
+const svg = d3.select('#graph');
+const mainG = svg.append('g');
+
+// Dot grid background
+for (let i = 0; i < 20; i++)
+  for (let j = 0; j < 30; j++)
+    mainG.append('circle')
+      .attr('cx', j * 70).attr('cy', i * 70)
+      .attr('r', 0.8).attr('fill', '#7c8cf8').attr('opacity', 0.018);
+
+const nodeData = STATIONS.map(s => ({ ...s, r: nodeRadius(s) }));
+const linkData = SYNAPSES.map(s => ({
+  ...s,
+  source: s.from,
+  target: s.to,
+  _type: detectLinkType(s.from, s.to)
+}));
+
+// Arrow markers per world
+WORLDS.forEach(w => {
+  svg.append('defs').append('marker')
+    .attr('id', 'arr-' + w.id)
+    .attr('markerWidth', 5).attr('markerHeight', 5)
+    .attr('refX', 5).attr('refY', 2.5).attr('orient', 'auto')
+    .append('path').attr('d', 'M0,0 L5,2.5 L0,5 Z')
+    .attr('fill', w.color).attr('opacity', 0.7);
+});
+
+const linkG = mainG.append('g');
+const nodeG = mainG.append('g');
+
+const linkEls = linkG.selectAll('g').data(linkData).join('g');
+linkEls.append('path').attr('class', 'link-path').attr('fill', 'none');
+linkEls.append('path').attr('class', 'link-glow').attr('fill', 'none').attr('opacity', 0).attr('stroke-width', 5);
+
+const nodeEls = nodeG.selectAll('g').data(nodeData).join('g')
+  .attr('class', 'sn').style('cursor', 'pointer')
+  .on('click', (e, d) => { e.stopPropagation(); selectNode(d); })
+  .on('mouseenter', (e, d) => { hovered = d; updateStyles(); })
+  .on('mouseleave', () => { hovered = null; updateStyles(); });
+
+// Node layers (bottom to top)
+nodeEls.append('circle').attr('class', 'n-boss-ring').attr('fill', 'none').attr('stroke-width', 1.5).attr('opacity', 0);
+nodeEls.append('circle').attr('class', 'n-halo').attr('fill', 'none').attr('stroke', '#4ade80').attr('stroke-width', 2).attr('opacity', 0);
+nodeEls.append('circle').attr('class', 'n-start-ring').attr('fill', 'none').attr('stroke-width', 1).attr('opacity', 0).attr('stroke-dasharray', '3 3');
+nodeEls.append('circle').attr('class', 'n-sel-ring').attr('fill', 'none').attr('stroke-width', 2).attr('opacity', 0);
+nodeEls.append('circle').attr('class', 'n-glow').attr('fill', 'none').attr('opacity', 0);
+nodeEls.append('circle').attr('class', 'n-body').attr('fill', '#0000').attr('stroke-width', 1.5);
+nodeEls.append('circle').attr('class', 'n-core').attr('opacity', 0);
+nodeEls.append('circle').attr('class', 'n-start-dot').attr('fill', '#fff').attr('opacity', 0);
+nodeEls.append('circle').attr('class', 'n-cat-dot').attr('r', 2.5).attr('opacity', 0);
+nodeEls.append('text').attr('class', 'n-label').attr('text-anchor', 'middle').attr('font-size', 9).style('user-select','none').style('pointer-events','none');
+nodeEls.append('text').attr('class', 'n-pct').attr('text-anchor', 'middle').attr('font-size', 7).attr('font-weight', 700).style('user-select','none').style('pointer-events','none');
+nodeEls.append('circle').attr('class', 'n-note-dot').attr('r', 2).attr('fill', '#fbbf24').attr('opacity', 0);
+nodeEls.append('text').attr('class', 'n-pin').attr('font-size', 8).style('user-select','none').style('pointer-events','none');
+
+// ─── FORCE SIMULATION (tighter layout) ───
+const sim = d3.forceSimulation(nodeData)
+  .force('link', d3.forceLink(linkData).id(d => d.id).distance(45).strength(0.35))
+  .force('charge', d3.forceManyBody().strength(-180))
+  .force('collide', d3.forceCollide(d => d.r + 14).strength(0.9))
+  .force('x', d3.forceX().strength(0.03))
+  .force('y', d3.forceY().strength(0.03))
+  .alphaDecay(0.022)
+  .on('tick', () => {
+    linkEls.selectAll('.link-path,.link-glow').attr('d', d => {
+      const s = nodeData.find(n => n.id === (d.source?.id || d.source));
+      const t = nodeData.find(n => n.id === (d.target?.id || d.target));
+      if (!s || !t || s.x == null || t.x == null) return '';
+      const dx = t.x - s.x, dy = t.y - s.y, dist = Math.hypot(dx, dy);
+      if (dist < 1) return '';
+      const curve = dist * 0.18;
+      const mx = (s.x + t.x) / 2 - dy * curve / dist;
+      const my = (s.y + t.y) / 2 + dx * curve / dist;
+      const ang = Math.atan2(dy, dx);
+      const sx = s.x + Math.cos(ang) * (s.r + 2);
+      const sy = s.y + Math.sin(ang) * (s.r + 2);
+      const ex = t.x - Math.cos(ang) * (t.r + 6);
+      const ey = t.y - Math.sin(ang) * (t.r + 6);
+      return `M${sx},${sy} Q${mx},${my} ${ex},${ey}`;
+    });
+    nodeEls.attr('transform', d => (d.x != null) ? `translate(${d.x},${d.y})` : '');
+    updateNodeStyles();
+  });
+
+// ─── NODE STYLES ───
+function updateNodeStyles() {
+  const act = computeActivations(searchQuery);
+  const isSearching = searchQuery.trim().length > 0;
+  const connectedIds = new Set();
+  if (selected) {
+    connectedIds.add(selected.id);
+    SYNAPSES.forEach(s => { if (s.from === selected.id) connectedIds.add(s.to); if (s.to === selected.id) connectedIds.add(s.from); });
+  }
+  if (hovered) {
+    connectedIds.add(hovered.id);
+    SYNAPSES.forEach(s => { if (s.from === hovered.id) connectedIds.add(s.to); if (s.to === hovered.id) connectedIds.add(s.from); });
+  }
+  const lineSet = selectedLine ? new Set(LINES.find(l => l.id === selectedLine)?.path || []) : null;
+  const linePairs = selectedLine ? (() => {
+    const path = LINES.find(l => l.id === selectedLine)?.path || [];
+    const s = new Set();
+    for (let i = 0; i < path.length - 1; i++) s.add(path[i] + '__' + path[i + 1]);
+    return s;
+  })() : null;
+
+  nodeEls.each(function(d) {
+    const g = d3.select(this);
+    const W = worldMap[d.world] || { color: '#666', name: d.world };
+    const r = d.r;
+    const a = act[d.id] || 0;
+    const fc = fragColor(d.weight?.dependency || d.weight?.fragility || 0);
+    const isBoss = d.role === 'importance' || d.role === 'boss';
+    const isStart = isRoot(d);
+    const isSel = selected?.id === d.id;
+    const isHov = hovered?.id === d.id;
+
+    let op = 1;
+    if (!showAll && connectedIds.size === 0) {
+      op = isRoot(d) ? 1 : 0;
+    } else if (!showAll) {
+      if (isRoot(d)) op = 1;
+      else if (connectedIds.has(d.id)) op = 0.7;
+      else op = 0.02;
+    } else if (lineSet && !lineSet.has(d.id)) {
+      op = 0.05;
+    } else if (isSearching) {
+      op = a > 0.05 ? 0.3 + a * 0.7 : 0.04;
+    } else if (connectedIds.size > 0 && !connectedIds.has(d.id)) {
+      op = 0.08;
+    }
+    if (!passesFilters(d)) op = 0.03;
+
+    g.style('opacity', op);
+
+    // Boss ring
+    g.select('.n-boss-ring')
+      .attr('r', r + 10)
+      .attr('stroke', W.color)
+      .attr('opacity', isBoss ? 0.16 : 0);
+
+    // Terminal halo
+    g.select('.n-halo')
+      .attr('r', r + 5)
+      .attr('stroke', d.terminalType === 'failure' ? '#f87171' : '#4ade80')
+      .attr('opacity', d.role === 'terminal' ? 0.55 : 0);
+
+    // Start ring
+    g.select('.n-start-ring')
+      .attr('r', r + 8)
+      .attr('stroke', W.color)
+      .attr('opacity', isStart ? 0.5 : 0)
+      .attr('stroke-width', isStart ? 1.5 : 1);
+
+    // Selection ring
+    const selRing = g.select('.n-sel-ring');
+    if (isSel) selRing.attr('r', r + 4).attr('stroke', W.color).attr('stroke-width', 2.5).attr('opacity', 0.9);
+    else if (isHov) selRing.attr('r', r + 3).attr('stroke', W.color).attr('stroke-width', 1.5).attr('opacity', 0.65);
+    else selRing.attr('opacity', 0);
+
+    // Search glow
+    g.select('.n-glow')
+      .attr('r', r + 14)
+      .attr('fill', W.color)
+      .attr('opacity', (isSearching && a > 0.45) ? a * 0.1 : 0);
+
+    // Body
+    g.select('.n-body')
+      .attr('r', r)
+      .attr('fill', W.color + '33')
+      .attr('stroke', isSel ? W.color : fc)
+      .attr('stroke-width', isSel ? 2.5 : isBoss ? 2.2 : 1.5);
+
+    // Core
+    g.select('.n-core')
+      .attr('r', r * 0.45)
+      .attr('fill', W.color)
+      .attr('opacity', (isBoss || isStart) ? 0.45 : 0);
+
+    // Start dot
+    g.select('.n-start-dot')
+      .attr('r', 2.5)
+      .attr('fill', W.color)
+      .attr('opacity', isStart ? 0.9 : 0);
+
+    // Category dot (top-right of node)
+    g.select('.n-cat-dot')
+      .attr('cx', r - 2)
+      .attr('cy', -r + 2)
+      .attr('fill', CAT_COLORS[d._cat] || '#888')
+      .attr('opacity', 0.85);
+
+    // Label
+    g.select('.n-label')
+      .attr('y', r + 11)
+      .text(d.label.length > 22 ? d.label.substring(0, 20) + '…' : d.label)
+      .attr('fill', (isSel || isHov) ? '#e8e8f0' : '#9494b8')
+      .attr('font-size', (isSel || isHov) ? 9.5 : 8.5)
+      .attr('font-weight', isSel ? 700 : 400);
+
+    // Search %
+    g.select('.n-pct')
+      .attr('y', -r - 8)
+      .text((isSearching && a > 0.6) ? Math.round(a * 100) + '%' : '')
+      .attr('fill', W.color);
+
+    // Note dot
+    g.select('.n-note-dot')
+      .attr('cx', r - 1.5).attr('cy', r - 1.5)
+      .attr('opacity', notes[d.id] ? 0.85 : 0);
+
+    // Pin
+    g.select('.n-pin')
+      .attr('x', -r + 2).attr('y', -r + 9)
+      .text(pinned.has(d.id) ? '📌' : '');
+  });
+
+  // ─── LINK STYLES ───
+  linkEls.each(function(d) {
+    const g = d3.select(this);
+    const sId = d.source?.id || d.source;
+    const tId = d.target?.id || d.target;
+    const fs = stationMap[sId];
+    const ts = stationMap[tId];
+    const srcW = fs?.world || 'core';
+    const W = worldMap[srcW] || { color: '#666' };
+    const a = computeActivations(searchQuery);
+    const isSearching = searchQuery.trim().length > 0;
+
+    // Determine link style based on type
+    let linkDash = null;
+    let linkColor = W.color;
+    if (d._type === 'controller-controller') linkDash = null; // solid = same type internal
+    else if (d._type === 'ui-ui') linkDash = '2 4'; // short dash = UI → UI
+    else if (d._type === 'domain-domain') linkDash = '6 3'; // long dash = model → model
+    else if (d._type === 'cross') linkDash = '8 4 2 4'; // complex = cross-boundary
+    else if (d.direction === 'back') linkDash = '4 4';
+    else if (d.condition?.type !== 'always') linkDash = '5 3';
+
+    let op = 0.22;
+    if (!showAll && !selected && !hovered) {
+      op = 0;
+    } else if (!showAll) {
+      const focus = (selected || hovered)?.id;
+      op = (sId === focus || tId === focus) ? 0.7 : 0.015;
+    } else if (linePairs) {
+      const key = sId + '__' + tId;
+      op = linePairs.has(key) ? 0.9 : 0.015;
+    } else if (isSearching) {
+      const fa = a[sId] || 0, ta = a[tId] || 0;
+      op = Math.max(fa, ta) > 0.2 ? Math.max(fa, ta) * 0.65 : 0.02;
+    } else if (selected || hovered) {
+      const focus = (selected || hovered)?.id;
+      op = (sId === focus || tId === focus) ? 0.7 : 0.03;
+    }
+
+    const path = g.select('.link-path');
+    path.attr('stroke', linkColor)
+      .attr('stroke-width', d.isCritical ? 1.2 : 0.7)
+      .attr('stroke-dasharray', linkDash || 'none')
+      .attr('marker-end', 'url(#arr-' + srcW + ')')
+      .attr('opacity', op);
+
+    g.select('.link-glow')
+      .attr('stroke', linkColor)
+      .attr('opacity', (d.isCritical && op > 0.3) ? 0.1 : 0);
+  });
+}
+
+function updateStyles() {
+  updateNodeStyles();
+  updatePanel();
+  updateStatusBar();
+  updateHint();
+}
+
+// ─── ZOOM & PAN ───
+let isDragging = false, dragOrig = { x: 0, y: 0 };
+
+svg.on('wheel', (e) => {
+  e.preventDefault();
+  transform.k = Math.max(0.12, Math.min(3.5, transform.k * (1 - e.deltaY * 0.0025)));
+  applyTransform();
+});
+
+svg.on('dblclick', (e) => {
+  e.preventDefault();
+  const pt = svg.node().createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const svgPt = pt.matrixTransform(svg.node().getScreenCTM().inverse());
+  const factor = 1.5;
+  transform.x = svgPt.x - factor * (svgPt.x - transform.x);
+  transform.y = svgPt.y - factor * (svgPt.y - transform.y);
+  transform.k = Math.min(3.5, transform.k * factor);
+  applyTransform();
+});
+
+svg.on('mousedown', (e) => {
+  if (e.target.closest('.sn')) return;
+  isDragging = true;
+  dragOrig = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+});
+svg.on('mousemove', (e) => {
+  if (!isDragging) return;
+  transform.x = e.clientX - dragOrig.x;
+  transform.y = e.clientY - dragOrig.y;
+  applyTransform();
+});
+svg.on('mouseup', () => { isDragging = false; });
+svg.on('mouseleave', () => { isDragging = false; });
+svg.on('click', (e) => {
+  if (e.target.closest('.sn')) return;
+  deselectNode();
+});
+
+function applyTransform() {
+  mainG.attr('transform', `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+}
+
+// ─── SEARCH ───
+const searchEl = document.getElementById('search');
+const sclearEl = document.getElementById('search-clear');
+
+searchEl.addEventListener('input', () => {
+  searchQuery = searchEl.value;
+  sclearEl.style.display = searchQuery.trim() ? 'block' : 'none';
+  updateStyles();
+});
+sclearEl.addEventListener('click', () => {
+  searchEl.value = '';
+  searchQuery = '';
+  sclearEl.style.display = 'none';
+  updateStyles();
+});
+
+// ─── FILTER PANEL ───
+const filterPanel = document.getElementById('filter-panel');
+const mainArea = document.getElementById('main-area');
+const btnFilters = document.getElementById('btn-filters');
+const btnFpClose = document.getElementById('btn-fp-close');
+const filterCount = document.getElementById('filter-count');
+
+function toggleFilterPanel() {
+  filterPanelOpen = !filterPanelOpen;
+  filterPanel.classList.toggle('open', filterPanelOpen);
+  mainArea.classList.toggle('filter-open', filterPanelOpen);
+  if (filterPanelOpen) buildFilterPanel();
+}
+btnFilters.addEventListener('click', toggleFilterPanel);
+btnFpClose.addEventListener('click', toggleFilterPanel);
+
+function updateFilterCount() {
+  const n = activeFilterCount();
+  filterCount.textContent = n;
+  filterCount.classList.toggle('visible', n > 0);
+}
+
+function onFilterChange() {
+  updateFilterCount();
+  updateStyles();
+}
+
+function buildFilterPanel() {
+  // ── Worlds ──
+  const fpw = document.getElementById('fp-worlds');
+  fpw.innerHTML = '<div class="fp-label">Domains (Worlds)</div>' +
+    WORLDS.map(w => `
+      <label class="fp-row">
+        <input type="checkbox" ${activeFilters.worlds[w.id] ? 'checked' : ''}
+          onchange="activeFilters.worlds['${w.id}']=this.checked;onFilterChange()">
+        <span class="fp-color" style="background:${w.color}"></span>
+        ${escHtml(w.name)} (${STATIONS.filter(s => s.world === w.id).length})
+      </label>`).join('');
+
+  // ── Lines ──
+  const fpl = document.getElementById('fp-lines');
+  fpl.innerHTML = '<div class="fp-label">Lines (Flows)</div>' +
+    (LINES.length > 0 ? LINES.map(l => {
+      const os = l.outcome === 'failure' ? '🔴' : l.outcome === 'partial' ? '🟡' : '🟢';
+      return `<label class="fp-row">
+        <input type="checkbox" ${activeFilters.lines[l.id] !== false ? 'checked' : ''}
+          onchange="activeFilters.lines['${l.id}']=this.checked;onFilterChange()">
+        ${os} ${escHtml(l.name)} (${l.path?.length||0})
+      </label>`;
+    }).join('') : '<div style="font-size:9px;color:var(--text3);padding:4px 0;">No lines defined</div>');
+
+  // ── Roles ──
+  const fpr = document.getElementById('fp-roles');
+  const roleDist = {};
+  STATIONS.forEach(s => { roleDist[s.role] = (roleDist[s.role] || 0) + 1; });
+  fpr.innerHTML = '<div class="fp-label">Station Type</div>' +
+    Object.entries(ROLE_ICONS).map(([role, icon]) => `
+      <label class="fp-row">
+        <input type="checkbox" ${activeFilters.roles[role] ? 'checked' : ''}
+          onchange="activeFilters.roles['${role}']=this.checked;onFilterChange()">
+        <span class="fp-role-icon">${icon}</span>
+        ${role.charAt(0).toUpperCase() + role.slice(1)} (${roleDist[role] || 0})
+      </label>`).join('') +
+    '<div class="fp-label" style="margin-top:6px">Category (auto-detected)</div>' +
+    Object.entries(CAT_LABELS).map(([cat, label]) => `
+      <label class="fp-row">
+        <input type="checkbox" ${activeFilters.categories[cat] ? 'checked' : ''}
+          onchange="activeFilters.categories['${cat}']=this.checked;onFilterChange()">
+        <span class="fp-color" style="background:${CAT_COLORS[cat]}"></span>
+        ${label} (${STATIONS.filter(s => s._cat === cat).length})
+      </label>`).join('');
+
+  // ── Authors ──
+  const fpa = document.getElementById('fp-authors');
+  fpa.innerHTML = '<div class="fp-label">Author</div>' +
+    allAuthors.map(a => `
+      <label class="fp-row">
+        <input type="checkbox" ${activeFilters.authors[a] ? 'checked' : ''}
+          onchange="activeFilters.authors['${escHtml(a)}']=this.checked;onFilterChange()">
+        ${escHtml(a)} (${STATIONS.filter(s => (s.authors||[]).includes(a)).length})
+      </label>`).join('');
+
+  // ── Weight Sliders ──
+  const fpw2 = document.getElementById('fp-weights');
+  fpw2.innerHTML = '<div class="fp-label">Weight Filters</div>' +
+    [
+      { id: 'influence', label: 'Influence', color: '#74b9ff' },
+      { id: 'dependency', label: 'Dependency', color: '#f87171' },
+      { id: 'churn', label: 'Churn', color: '#fbbf24' },
+      { id: 'centrality', label: 'Centrality', color: '#a78bfa' }
+    ].map(w => `
+      <div class="weight-slider">
+        <span class="ws-label" style="color:${w.color}">${w.label}</span>
+        <input type="range" min="0" max="100" value="${Math.round(activeFilters.weightMin[w.id] * 100)}"
+          oninput="activeFilters.weightMin['${w.id}']=this.value/100;document.getElementById('wsv-${w.id}').textContent=this.value+'%';onFilterChange()">
+        <span class="ws-val" id="wsv-${w.id}">${Math.round(activeFilters.weightMin[w.id] * 100)}%</span>
+      </div>`).join('');
+}
+
+// ─── EXPAND / SHOW ALL ───
+document.getElementById('btn-expand').addEventListener('click', () => {
+  showAll = !showAll;
+  const btn = document.getElementById('btn-expand');
+  btn.textContent = showAll ? '▲ Start Only' : '▼ Show All';
+  btn.classList.toggle('active', showAll);
+  updateStyles();
+});
+
+// ─── RESET ───
+document.getElementById('btn-reset').addEventListener('click', () => {
+  transform = { x: 0, y: 0, k: 1 };
+  applyTransform();
+  searchEl.value = '';
+  searchQuery = '';
+  sclearEl.style.display = 'none';
+  selected = null;
+  hovered = null;
+  selectedLine = null;
+  showAll = true;
+  const expandBtn = document.getElementById('btn-expand');
+  expandBtn.textContent = '▲ Start Only';
+  expandBtn.classList.add('active');
+  document.getElementById('detail-panel').classList.remove('open');
+  // Reset all filters
+  activeFilters.worlds = Object.fromEntries(WORLDS.map(w => [w.id, true]));
+  activeFilters.roles = Object.fromEntries(Object.keys(ROLE_ICONS).map(r => [r, true]));
+  activeFilters.categories = Object.fromEntries(Object.keys(CAT_LABELS).map(c => [c, true]));
+  activeFilters.authors = Object.fromEntries(allAuthors.map(a => [a, true]));
+  activeFilters.weightMin = { influence: 0, dependency: 0, churn: 0, centrality: 0 };
+  updateFilterCount();
+  updateStyles();
+});
+
+// ─── SELECT / DESELECT ───
+function selectNode(station) {
+  selected = station;
+  document.getElementById('detail-panel').classList.add('open');
+  updateStyles();
+}
+
+function deselectNode() {
+  selected = null;
+  document.getElementById('detail-panel').classList.remove('open');
+  updateStyles();
+}
+
+// ─── DETAIL PANEL ───
+function updatePanel() {
+  const content = document.getElementById('dp-content');
+  if (!selected) { content.innerHTML = ''; return; }
+
+  const W = worldMap[selected.world] || { color: '#666', name: selected.world };
+  const out = SYNAPSES.filter(s => s.from === selected.id);
+  const inc = SYNAPSES.filter(s => s.to === selected.id);
+  const isPinned = pinned.has(selected.id);
+
+  content.innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between">
+      <div>
+        <div class="dp-world">${(W.name || selected.world).toUpperCase()} · ${CAT_LABELS[selected._cat] || selected._cat}
+          · ${selected.role?.toUpperCase()}${selected.terminalType ? ' (' + selected.terminalType + ')' : ''}</div>
+        <h3 style="color:${W.color}">${escHtml(selected.label)}</h3>
+      </div>
+      <button class="dp-close" onclick="deselectNode()">×</button>
+    </div>
+    <div class="dp-desc">${escHtml(selected.description || 'No description')}</div>
+
+    <div>
+      ${[
+        { k: 'influence', label: 'INFLUENCE', c: '#74b9ff', v: selected.weight?.influence || 0 },
+        { k: 'dependency', label: 'DEPENDENCY', c: fragColor(selected.weight?.dependency || selected.weight?.fragility || 0), v: selected.weight?.dependency || selected.weight?.fragility || 0 },
+        { k: 'churn', label: 'CHURN', c: '#fbbf24', v: selected.weight?.churn || 0 },
+        { k: 'centrality', label: 'CENTRALITY', c: '#a78bfa', v: selected.weight?.centrality || 0 }
+      ].map(w => `
+        <div class="dp-weight-row">
+          <span class="wl" style="color:${w.c}">${w.label}</span>
+          <div class="wb"><div class="wf" style="width:${Math.round(w.v * 100)}%;background:${w.c}"></div></div>
+          <span class="wv" style="color:${w.c}">${Math.round(w.v * 100)}%</span>
+        </div>
+      `).join('')}
+    </div>
+
+    ${selected.files?.length ? `
+      <div style="margin-top:4px;font-size:8px;color:var(--text3);letter-spacing:.06em">FILES (${selected.files.length})</div>
+      <div style="font-size:9px;color:var(--text2);line-height:1.6;margin-top:4px">${selected.files.map(f =>
+        `<div style="padding-left:6px;border-left:2px solid ${W.color}33">${escHtml(f)}</div>`).join('')}</div>
+    ` : ''}
+
+    ${selected.authors?.length ? `
+      <div style="margin-top:4px;font-size:8px;color:var(--text3);letter-spacing:.06em">AUTHORS</div>
+      <div style="font-size:9px;color:var(--text2);line-height:1.6;margin-top:4px">${selected.authors.map(a =>
+        `<span style="display:inline-block;padding:1px 5px;background:${W.color}18;border-radius:3px;margin:1px 2px">${escHtml(a)}</span>`).join('')}</div>
+    ` : ''}
+
+    ${selected.commitCount ? `
+      <div style="margin-top:4px;font-size:8px;color:var(--text3);letter-spacing:.06em">COMMITS</div>
+      <div style="font-size:10px;color:var(--accent);font-weight:600">${selected.commitCount}</div>
+    ` : ''}
+
+    ${out.length ? `
+      <div style="margin-top:4px;font-size:8px;color:var(--text3);letter-spacing:.06em">OUTGOING (${out.length})</div>
+      <div class="syn-list">${out.map(s => {
+        const t = stationMap[s.to];
+        const lt = detectLinkType(selected.id, s.to);
+        return `<div>→ <a class="dp-syn-link" data-station-id="${s.to}" style="cursor:pointer;color:var(--accent);text-decoration:none">${escHtml(t?.label || s.to)}</a>
+          <span class="syn-tag" style="background:${CAT_COLORS[t?._cat]||'#666'}22;color:${CAT_COLORS[t?._cat]||'#666'}">${t?._cat || '?'}</span>
+          <span class="syn-tag" style="background:var(--bg3);color:var(--text3)">${lt.replace(/-/g,'→')}</span></div>
+          <div style="font-size:8px;color:var(--text3);padding-left:14px">${escHtml(s.condition?.description || '')}</div>`;
+      }).join('')}</div>
+    ` : ''}
+
+    ${inc.length ? `
+      <div style="margin-top:4px;font-size:8px;color:var(--text3);letter-spacing:.06em">INCOMING (${inc.length})</div>
+      <div class="syn-list">${inc.map(s => {
+        const f = stationMap[s.from];
+        const lt = detectLinkType(s.from, selected.id);
+        return `<div>← <a class="dp-syn-link" data-station-id="${s.from}" style="cursor:pointer;color:var(--accent);text-decoration:none">${escHtml(f?.label || s.from)}</a>
+          <span class="syn-tag" style="background:${CAT_COLORS[f?._cat]||'#666'}22;color:${CAT_COLORS[f?._cat]||'#666'}">${f?._cat || '?'}</span>
+          <span class="syn-tag" style="background:var(--bg3);color:var(--text3)">${lt.replace(/-/g,'→')}</span></div>
+          <div style="font-size:8px;color:var(--text3);padding-left:14px">${escHtml(s.condition?.description || '')}</div>`;
+      }).join('')}</div>
+    ` : ''}
+
+    <div style="margin-top:4px;">
+      <div style="font-size:8px;color:var(--text3);letter-spacing:.06em;margin-bottom:4px">NOTES</div>
+      <textarea id="note-text" placeholder="Add a note…" style="width:100%;height:50px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10px;padding:6px;resize:vertical;outline:none">${escHtml(notes[selected.id] || '')}</textarea>
+      <div style="display:flex;gap:6px;margin-top:4px">
+        <button class="dp-save-note" style="padding:3px 8px;border-radius:3px;font-size:9px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2)">Save</button>
+        <button class="dp-clear-note" style="padding:3px 8px;border-radius:3px;font-size:9px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2)">Clear</button>
+        <button class="dp-toggle-pin" data-station-id="${selected.id}" style="margin-left:auto;padding:3px 8px;border-radius:3px;font-size:9px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2)">${isPinned ? '📌 Unpin' : '📌 Pin'}</button>
+      </div>
+    </div>
+  `;
+}
+
+// ─── LEGEND ───
+function updateLegend() {
+  const legend = document.getElementById('legend-float');
+  legend.innerHTML = `
+    <div class="leg-item"><span class="leg-dot" style="background:#4ade80"></span> low risk</div>
+    <div class="leg-item"><span class="leg-dot" style="background:#fbbf24"></span> med</div>
+    <div class="leg-item"><span class="leg-dot" style="background:#f87171"></span> high</div>
+    <div class="leg-item"><span style="color:var(--text3)">|</span></div>
+    <div class="leg-item"><span class="leg-line" style="background:var(--text2)"></span> same-type</div>
+    <div class="leg-item"><span class="leg-line" style="background:var(--text2);border-top:2px dashed var(--text2);height:0"></span> UI→UI</div>
+    <div class="leg-item"><span class="leg-line" style="background:var(--text2);border-top:2px dotted var(--text2);height:0"></span> cross</div>
+  `;
+}
+
+// ─── STATUS BAR ───
+function updateStatusBar() {
+  const sbSearch = document.getElementById('sb-search');
+  const sbLine = document.getElementById('sb-line');
+  const sbActive = document.getElementById('sb-active');
+
+  if (searchQuery.trim()) {
+    const count = Object.keys(computeActivations(searchQuery)).length;
+    sbSearch.style.display = 'inline';
+    sbSearch.textContent = `Search: ${count} match(es)`;
+  } else sbSearch.style.display = 'none';
+
+  if (selectedLine) {
+    sbLine.style.display = 'inline';
+    sbLine.textContent = `Line: ${LINES.find(l => l.id === selectedLine)?.name || selectedLine}`;
+  } else sbLine.style.display = 'none';
+
+  const n = activeFilterCount();
+  sbActive.style.display = n > 0 ? 'inline' : 'none';
+  sbActive.textContent = n > 0 ? `${n} filter(s) active` : '';
+}
+
+// ─── HINT OVERLAY ───
+function updateHint() {
+  const overlay = document.getElementById('hint-overlay');
+  const anyVisible = nodeData.some(d => {
+    if (!showAll && !selected && !hovered) return isRoot(d) && passesFilters(d);
+    // rough check — if all nodes are near 0 opacity
+    return true;
+  });
+  // Show hint only when in start-only mode with no selection
+  if (!showAll && !selected && !hovered && !searchQuery.trim()) {
+    overlay.classList.add('show');
+  } else {
+    overlay.classList.remove('show');
+  }
+}
+
+// ─── ACTIONS ───
+window.selectNodeById = function(id) { const st = stationMap[id]; if (st) selectNode(st); };
+// ─── DETAIL PANEL EVENT DELEGATION ───
+document.getElementById('dp-content').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  if (btn.classList.contains('dp-save-note')) {
+    if (!selected) return;
+    const text = document.getElementById('note-text')?.value || '';
+    notes = { ...notes, [selected.id]: text };
+    updateStyles();
+  } else if (btn.classList.contains('dp-clear-note')) {
+    if (!selected) return;
+    const ta = document.getElementById('note-text');
+    if (ta) ta.value = '';
+    notes = { ...notes, [selected.id]: '' };
+    updateStyles();
+  } else if (btn.classList.contains('dp-toggle-pin')) {
+    const id = btn.dataset.stationId;
+    if (id) {
+      const s = new Set(pinned);
+      if (s.has(id)) s.delete(id); else s.add(id);
+      pinned = s;
+      updateStyles();
+    }
+  } else if (btn.classList.contains('dp-syn-link')) {
+    const id = btn.dataset.stationId;
+    if (id) { const st = stationMap[id]; if (st) selectNode(st); }
+  }
+});
+window.deselectNode = deselectNode;
+window.onFilterChange = onFilterChange;
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ─── KEYBOARD SHORTCUTS ───
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    deselectNode();
+    searchEl.value = ''; searchQuery = ''; sclearEl.style.display = 'none';
+    updateStyles();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    e.preventDefault();
+    searchEl.focus();
+  }
+  if (e.key === 'f' && !e.ctrlKey && !e.metaKey && document.activeElement !== searchEl) {
+    // Toggle filter panel
+    toggleFilterPanel();
+  }
+});
+
+// ─── INIT ───
+applyTransform();
+updateStyles();
+updateLegend();
+updateFilterCount();
+
+// Center on start nodes after simulation settles
+setTimeout(() => {
+  const starts = nodeData.filter(n => isRoot(n));
+  if (starts.length > 0) {
+    const valid = starts.filter(n => n.x != null && n.y != null);
+    if (valid.length > 0) {
+      const cx = valid.reduce((s, n) => s + n.x, 0) / valid.length;
+      const cy = valid.reduce((s, n) => s + n.y, 0) / valid.length;
+      transform = { x: (window.innerWidth / 2) - cx, y: (window.innerHeight / 2) - cy, k: 1.1 };
+      applyTransform();
+    }
+  }
+}, 1800);
+
+// ─── RESIZE ───
+window.addEventListener('resize', () => {
+  sim.force('center', d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2));
+  sim.alpha(0.3).restart();
+});
+</script>
+</body>
+</html>

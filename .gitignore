@@ -9,6 +9,4 @@ coverage/
 # Generated artifacts (CLI output)
 subway.json
 subway-sample.json
-*.html
-!src/**/*.html
 *.tgz

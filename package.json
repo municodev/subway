@@ -1,6 +1,6 @@
 {
   "name": "@municode/subway",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Map your codebase — Every codebase is a game. Every search is a synapse.",
   "type": "module",
   "bin": {
