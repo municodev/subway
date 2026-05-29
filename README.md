@@ -14,7 +14,7 @@ npm install -g @municode/subway
 cd your-project
 subway init
 
-# Open the interactive visual map
+# Generate the interactive visual map
 subway serve
 ```
 
@@ -27,7 +27,7 @@ npx @municode/subway serve
 
 ## Use as a Skill
 
-Subway can be used as a skill for LLMs, giving AI agents the ability to generate, serve, and explore codebase maps using Subway's MCP tools.
+Once installed, Subway can be used as a skill for LLMs, giving AI agents the ability to generate, serve, and explore codebase maps using Subway's MCP tools.
 
 ### Install the Skill
 
@@ -37,9 +37,6 @@ Subway can be used as a skill for LLMs, giving AI agents the ability to generate
 ```bash
 # Create the skills directory if it doesn't exist
 mkdir -p ~/.claude/skills
-
-# Navigate to the skills directory
-cd ~/.claude/skills
 
 # Extract the skill
 unzip subway.zip -d ~/.claude/skills/
@@ -115,7 +112,7 @@ Subway includes an MCP server with 9 tools for AI agents (Claude Desktop, Cursor
 | `subway_busrisk` | Single-author stations (bus factor risk) |
 | `subway_ask` | Natural language questions about the codebase |
 
-Configure in Claude Desktop:
+Configure in Claude Desktop/Antigravity/Other:
 
 ```json
 {
