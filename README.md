@@ -2,7 +2,7 @@
 
 **Every codebase is a map.**
 
-Subway maps your codebase as an interactive, navigable graph — like a subway map for your code. It analyzes your project's structure, traces navigation paths, calculates synaptic weights (influence, dependency, churn, centrality), and produces a single `subway.json` that powers a visual browser and MCP tools for AI agents.
+Subway maps your codebase as an interactive, navigable graph — like a subway map for your code. It analyzes your project's structure, traces navigation paths, calculates synaptic weights (influence, dependency, churn, centrality), and produces a single `subway.json` that powers a visual browser and MCP tools for AI agents to create a Subway map in HTML.
 
 ## Quick Start
 
@@ -24,6 +24,58 @@ Or use without installing:
 npx @municode/subway init
 npx @municode/subway serve
 ```
+
+## Use as a Skill
+
+Subway can be used as a skill for LLMs, giving AI agents the ability to generate, serve, and explore codebase maps using Subway's MCP tools.
+
+### Install the Skill
+
+1. Download [`subway.zip`](./subway.zip) from this repository
+2. Extract it to your skill directory:
+
+```bash
+# Create the skills directory if it doesn't exist
+mkdir -p ~/.claude/skills
+
+# Navigate to the skills directory
+cd ~/.claude/skills
+
+# Extract the skill
+unzip subway.zip -d ~/.claude/skills/
+```
+
+3. Verify the installation:
+
+```bash
+ls ~/.claude/skills/subway/
+# Should show: SKILL.md  references/
+```
+
+### What's Included
+
+The skill package contains:
+
+- **`SKILL.md`** — Full workflow instructions for AI agents, including environment detection, file filtering rules, station/synapse/line creation, and the complete map-building process
+- **`references/tools.md`** — Catalog of all 23 Subway MCP tools with parameters
+- **`references/schema.md`** — The `subway.json` v3.0 schema specification
+
+### How It Works
+
+Once installed, the Claude/Gemini/Codex/Pi agent can:
+
+- **Detect project environments** (iOS, Android, Flutter, React Native, Web, etc.) and apply appropriate file filtering rules
+- **Generate new maps** interactively using the MCP build tools (init → explore → worlds → stations → synapses → lines → save)
+- **Serve existing maps** by generating a self-contained HTML viewer
+- **Explore maps** using synaptic search, path finding, impact analysis, and natural language Q&A
+
+The skill instructs the agent to use Subway's MCP server (`@municode/subway`) which must be installed separately:
+
+```bash
+npm install -g @municode/subway
+```
+
+Or configure as an MCP server in your Claude/Gemini/Codex/Pi config (see [MCP Server](#mcp-server-ai-agent-integration) section above).
 
 ## What You Get
 
@@ -115,8 +167,6 @@ Subway enriches every station (group of files/module) with four dynamic metrics 
 ## Requirements
 
 - Node.js 18+
-- For embeddings: Ollama (local) or OpenAI API key
-- For narration: Ollama with a chat model (llama3.2+) or OpenAI API key
 
 ## License
 
