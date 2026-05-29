@@ -1,6 +1,6 @@
 # Subway 🚇
 
-**Every codebase is a game. Every search is a synapse.**
+**Every codebase is a map.**
 
 Subway maps your codebase as an interactive, navigable graph — like a subway map for your code. It analyzes your project's structure, traces navigation paths, calculates synaptic weights (influence, dependency, churn, centrality), and produces a single `subway.json` that powers a visual browser and MCP tools for AI agents.
 
